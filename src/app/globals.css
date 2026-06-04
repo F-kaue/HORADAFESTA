@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 100% 98%;
+    --foreground: 240 29% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 29% 14%;
+    --muted: 30 40% 94%;
+    --muted-foreground: 240 10% 40%;
+    --border: 30 30% 90%;
+    --input: 30 30% 90%;
+    --ring: 16 78% 54%;
+  }
+
+  .dark {
+    --background: 240 29% 10%;
+    --foreground: 30 100% 98%;
+    --card: 240 29% 14%;
+    --card-foreground: 30 100% 98%;
+    --muted: 240 20% 20%;
+    --muted-foreground: 30 20% 70%;
+    --border: 240 20% 22%;
+    --input: 240 20% 22%;
+    --ring: 16 78% 54%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes confetti-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
+  50% { transform: translateY(-12px) rotate(8deg); opacity: 0.7; }
+}
+
+.animate-confetti {
+  animation: confetti-float 6s ease-in-out infinite;
+}
