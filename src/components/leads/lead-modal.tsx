@@ -9,9 +9,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrencyInput, parseCurrencyBRL } from "@/lib/utils";
 import { SLOT_LABELS, type SlotType } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { LeadFinancial } from "@/components/leads/lead-financial";
@@ -36,11 +37,15 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
   useEffect(() => {
     if (!lead?.id) return;
+    setTotalValue(
+      lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
+    );
+    setInternalNotes(lead.internal_notes ?? "");
     fetch(`/api/leads/${lead.id}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
       .catch(() => setHistory([]));
-  }, [lead?.id]);
+  }, [lead?.id, lead?.total_value, lead?.internal_notes]);
 
   if (!lead) return null;
 
@@ -50,7 +55,8 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   );
 
   const handleConfirm = async () => {
-    if (!totalValue) {
+    const amount = parseCurrencyBRL(totalValue);
+    if (amount <= 0) {
       toast.error("Informe o valor total");
       return;
     }
@@ -62,7 +68,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
         slot_type: confirmSlot,
         event_start_time: startTime || undefined,
         event_end_time: endTime || undefined,
-        total_value: parseFloat(totalValue.replace(",", ".")),
+        total_value: amount,
         internal_notes: internalNotes || undefined,
       }),
     });
@@ -164,13 +170,11 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                     </div>
                   </div>
                   <div>
-                    <Label>Valor total fechado (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
+                    <Label>Valor total fechado</Label>
+                    <CurrencyInput
                       value={totalValue}
-                      onChange={(e) => setTotalValue(e.target.value)}
-                      placeholder="5000.00"
+                      onValueChange={setTotalValue}
+                      placeholder="R$ 5.000,00"
                     />
                   </div>
                   <div>

@@ -3,8 +3,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  formatDate,
+  parseCurrencyBRL,
+} from "@/lib/utils";
 import type { Lead, Payment, PaymentRecord } from "@/types/database";
 import { toast } from "sonner";
 
@@ -16,7 +22,9 @@ interface LeadFinancialProps {
 export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
-  const [totalValue, setTotalValue] = useState(lead.total_value?.toString() ?? "");
+  const [totalValue, setTotalValue] = useState(
+    lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
+  );
   const [installments, setInstallments] = useState("1");
   const [paymentType, setPaymentType] = useState<"avista" | "parcelado">("avista");
 
@@ -37,7 +45,9 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
   const paidTotal = records
     .filter((r) => r.is_paid)
     .reduce((s, r) => s + Number(r.value), 0);
-  const total = payment ? Number(payment.total_value) : Number(totalValue) || 0;
+  const total = payment
+    ? Number(payment.total_value)
+    : parseCurrencyBRL(totalValue);
   const progress = total > 0 ? (paidTotal / total) * 100 : 0;
 
   const paymentStatus =
@@ -48,12 +58,17 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
         : "🟡 Parcialmente pago";
 
   const handleCreatePayment = async () => {
+    const amount = parseCurrencyBRL(totalValue);
+    if (amount <= 0) {
+      toast.error("Informe o valor total");
+      return;
+    }
     const res = await fetch("/api/payments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         lead_id: lead.id,
-        total_value: parseFloat(totalValue),
+        total_value: amount,
         installments: parseInt(installments, 10),
         payment_type: paymentType,
       }),
@@ -93,11 +108,11 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
       {!payment ? (
         <div className="space-y-3">
           <div>
-            <Label>Valor total (R$)</Label>
-            <Input
-              type="number"
+            <Label>Valor total</Label>
+            <CurrencyInput
               value={totalValue}
-              onChange={(e) => setTotalValue(e.target.value)}
+              onValueChange={setTotalValue}
+              placeholder="R$ 5.000,00"
             />
           </div>
           <div className="flex gap-2">

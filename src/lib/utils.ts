@@ -12,6 +12,27 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+/** Ex: 5000 → "R$ 5.000,00" para campo de entrada */
+export function formatCurrencyInput(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return formatCurrency(value);
+}
+
+/** Máscara em tempo real: só dígitos → centavos → R$ brasileiro */
+export function maskCurrencyBRL(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  const cents = parseInt(digits, 10);
+  return formatCurrency(cents / 100);
+}
+
+/** "R$ 5.000,00" → 5000 */
+export function parseCurrencyBRL(formatted: string): number {
+  const digits = formatted.replace(/\D/g, "");
+  if (!digits) return 0;
+  return parseInt(digits, 10) / 100;
+}
+
 export function formatDate(date: string | Date) {
   return new Intl.DateTimeFormat("pt-BR").format(
     typeof date === "string" ? new Date(date + "T12:00:00") : date
