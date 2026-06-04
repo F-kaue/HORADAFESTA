@@ -7,6 +7,12 @@ alwaysApply: true
 
 # Deploy e Git — Hora da Festa CRM
 
+## CRM compartilhado (equipe)
+
+- **Todos os leads** aparecem no kanban para **qualquer conta** autenticada (teste, dona, futuras).
+- O formulário `/orcamento` usa o **WhatsApp** salvo em Configurações (qualquer conta com número válido).
+- `OWNER_USER_ID` só define o `user_id` interno do lead no insert público; a leitura é compartilhada.
+
 Após **qualquer alteração** que deva ir para produção:
 
 1. Verificar build local: `npm run build`

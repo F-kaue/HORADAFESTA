@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getBusinessProfile } from "@/lib/business";
 import { dayStatus, type SlotType } from "@/lib/slots";
 import { getGoogleCalendarBusyDates } from "@/lib/google-calendar";
 
@@ -14,17 +15,12 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const ownerId = user?.id || process.env.OWNER_USER_ID;
-  if (!ownerId) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const db = user ? supabase : createAdminClient();
+  const admin = createAdminClient();
+  const db = user ? supabase : admin;
 
   if (date) {
-    const { data: slots } = await db.rpc("get_available_slots", {
+    const { data: slots } = await db.rpc("get_available_slots_shared", {
       check_date: date,
-      p_user_id: ownerId,
     });
 
     return NextResponse.json({ date, slots: slots ?? [] });
@@ -42,16 +38,11 @@ export async function GET(request: NextRequest) {
   const { data: eventSlots } = await db
     .from("event_slots")
     .select("event_date, slot_type")
-    .eq("user_id", ownerId)
     .eq("status", "confirmado")
     .gte("event_date", startDate)
     .lte("event_date", endDate);
 
-  const { data: profile } = await db
-    .from("profiles")
-    .select("blocked_dates, working_days, google_calendar_token")
-    .eq("id", ownerId)
-    .single();
+  const profile = await getBusinessProfile(admin);
 
   let googleBusy: Record<string, SlotType[]> = {};
   if (profile?.google_calendar_token) {

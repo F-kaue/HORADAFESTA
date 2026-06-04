@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getBusinessWhatsApp } from "@/lib/business";
 import { z } from "zod";
 
 const leadSchema = z.object({
@@ -74,18 +75,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("whatsapp")
-    .eq("id", ownerId)
-    .single();
-
-  const whatsappDigits = (profile?.whatsapp ?? "").replace(/\D/g, "");
-  if (whatsappDigits.length < 10) {
+  const whatsappDigits = await getBusinessWhatsApp(admin);
+  if (!whatsappDigits) {
     return NextResponse.json(
       {
         error:
-          "WhatsApp do buffet não configurado. Salve o número em Configurações (conta principal do CRM).",
+          "WhatsApp do buffet não configurado. Salve o número em Configurações (qualquer conta do CRM).",
       },
       { status: 503 }
     );
