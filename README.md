@@ -30,11 +30,11 @@ O arquivo `.env.local` já está preenchido. Para novo ambiente:
 cp .env.local.example .env.local
 ```
 
-### 3. Google Calendar (opcional)
+### 3. Google Calendar
 
-1. [Google Cloud Console](https://console.cloud.google.com) → OAuth 2.0
-2. Redirect URI: `{NEXT_PUBLIC_APP_URL}/api/google/callback`
-3. Preencha `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`
+Guia completo: **[GOOGLE-CALENDAR.md](./GOOGLE-CALENDAR.md)**
+
+Redirect URI de produção: `https://horadafesta.vercel.app/api/google/callback`
 
 ### 4. Rodar localmente
 
