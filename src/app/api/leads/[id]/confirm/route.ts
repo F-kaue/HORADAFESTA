@@ -71,15 +71,6 @@ export async function POST(
     );
   }
 
-  await supabase.from("event_slots").insert({
-    user_id: user.id,
-    event_date: lead.event_date,
-    slot_type: parsed.data.slot_type,
-    lead_id: id,
-    status: "confirmado",
-    google_event_id: googleEventId,
-  });
-
   const { data: updated, error } = await supabase
     .from("leads")
     .update({
@@ -97,6 +88,27 @@ export async function POST(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const { data: existingSlot } = await supabase
+    .from("event_slots")
+    .select("id")
+    .eq("lead_id", id)
+    .eq("status", "confirmado")
+    .maybeSingle();
+
+  if (!existingSlot) {
+    const { error: slotError } = await supabase.from("event_slots").insert({
+      user_id: user.id,
+      event_date: lead.event_date,
+      slot_type: parsed.data.slot_type,
+      lead_id: id,
+      status: "confirmado",
+      google_event_id: googleEventId,
+    });
+    if (slotError) {
+      return NextResponse.json({ error: slotError.message }, { status: 500 });
+    }
+  }
 
   return NextResponse.json({
     lead: updated,
