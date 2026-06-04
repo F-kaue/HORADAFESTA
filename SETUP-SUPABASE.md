@@ -36,9 +36,8 @@ As chaves `service_role` e `anon` foram expostas no chat. Após subir o sistema,
 
 ## Testar
 
-```bash
-npm run dev
-```
+**Produção:** https://horadafesta.vercel.app  
+**Local:** `npm run dev` → http://localhost:3000
 
-- Login: http://localhost:3000/login  
-- Formulário: http://localhost:3000/orcamento  
+- Login: `/login`  
+- Formulário público: `/orcamento`  

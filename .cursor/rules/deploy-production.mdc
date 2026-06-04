@@ -1,0 +1,19 @@
+---
+description: Sempre sincronizar Git com produção após mudanças no Hora da Festa CRM
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Deploy e Git — Hora da Festa CRM
+
+Após **qualquer alteração** que deva ir para produção:
+
+1. Verificar build local: `npm run build`
+2. Commit com mensagem clara (o quê e por quê)
+3. Push para `origin/main` — a Vercel faz deploy automático via GitHub
+4. Confirmar que variáveis sensíveis estão só na Vercel (nunca no commit)
+
+**Produção:** https://horadafesta.vercel.app  
+**Repositório:** https://github.com/F-kaue/HORADAFESTA  
+**Projeto Vercel:** `horadafesta` (team `f-kaues-projects`)

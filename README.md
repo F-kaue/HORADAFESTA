@@ -48,9 +48,15 @@ npm run dev
 
 ## Deploy (Vercel)
 
-1. Importe o repositório na Vercel
-2. Configure as variáveis de ambiente (mesmas do `.env.local`)
-3. `NEXT_PUBLIC_APP_URL` = URL de produção
+**Produção:** https://horadafesta.vercel.app
+
+Deploy automático ao dar push em `main` (GitHub → Vercel).
+
+Variáveis de ambiente: painel Vercel ou `powershell -File scripts/push-vercel-env.ps1`
+
+No Supabase (**Authentication → URL Configuration**):
+- Site URL: `https://horadafesta.vercel.app`
+- Redirect URLs: `https://horadafesta.vercel.app/**`
 
 ## Módulos
 
