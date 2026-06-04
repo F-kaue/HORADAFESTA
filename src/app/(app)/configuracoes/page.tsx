@@ -70,7 +70,14 @@ function ConfiguracoesContent() {
 
     setSaving(false);
     if (error) toast.error("Erro ao salvar");
-    else toast.success("Configurações salvas!");
+    else {
+      toast.success("Configurações salvas!");
+      if (profile.whatsapp) {
+        toast.message(
+          "O formulário /orcamento usa este WhatsApp para redirecionar novos leads."
+        );
+      }
+    }
   };
 
   const toggleDay = (day: number) => {

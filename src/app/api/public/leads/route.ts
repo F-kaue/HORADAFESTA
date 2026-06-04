@@ -80,8 +80,19 @@ export async function POST(request: NextRequest) {
     .eq("id", ownerId)
     .single();
 
+  const whatsappDigits = (profile?.whatsapp ?? "").replace(/\D/g, "");
+  if (whatsappDigits.length < 10) {
+    return NextResponse.json(
+      {
+        error:
+          "WhatsApp do buffet não configurado. Salve o número em Configurações (conta principal do CRM).",
+      },
+      { status: 503 }
+    );
+  }
+
   return NextResponse.json({
     leadId: data.id,
-    whatsapp: profile?.whatsapp || process.env.DEFAULT_WHATSAPP || "",
+    whatsapp: whatsappDigits,
   });
 }
