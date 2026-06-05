@@ -168,8 +168,8 @@ function ConfiguracoesContent() {
                   }
                   className={`flex-1 rounded-xl border-2 py-3 font-semibold min-h-[44px] transition-all ${
                     profile.max_events_per_day === n
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-input"
+                      ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                      : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
                   }`}
                 >
                   {n}
@@ -249,10 +249,10 @@ function ConfiguracoesContent() {
                   key={label}
                   type="button"
                   onClick={() => toggleDay(i)}
-                  className={`rounded-lg px-3 py-2 text-sm min-h-[44px] border-2 ${
+                  className={`rounded-lg px-3 py-2 text-sm min-h-[44px] border-2 font-semibold transition-colors ${
                     (profile.working_days ?? []).includes(i)
-                      ? "border-primary bg-primary/5"
-                      : "border-input opacity-50"
+                      ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                      : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
                   }`}
                 >
                   {label}
@@ -307,8 +307,10 @@ function ConfiguracoesContent() {
           <div className="flex gap-2">
             <Button onClick={copyLink}>Copiar link</Button>
           </div>
-          <div className="flex justify-center p-4 bg-white rounded-xl border">
-            <QRCodeSVG value={publicUrl} size={160} />
+          <div className="flex justify-center rounded-xl border border-border bg-muted/40 p-4 dark:bg-muted/30">
+            <div className="rounded-lg bg-white p-3">
+              <QRCodeSVG value={publicUrl} size={160} />
+            </div>
           </div>
         </CardContent>
       </Card>

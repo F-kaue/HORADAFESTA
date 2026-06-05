@@ -146,7 +146,7 @@ function KanbanColumn({
           className={cn(
             "flex min-h-[200px] flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
             styles.body,
-            highlighted && "border-primary bg-primary/5 ring-2 ring-primary/30"
+            highlighted && "border-primary bg-primary/5 ring-2 ring-primary/30 dark:bg-primary/15"
           )}
         >
           {leads.length === 0 ? (
@@ -156,11 +156,11 @@ function KanbanColumn({
                 highlighted ? "opacity-100" : "opacity-70"
               )}
             >
-              <Inbox className="h-8 w-8 text-foreground/40" strokeWidth={1.5} />
-              <p className="text-sm font-bold text-foreground">
+              <Inbox className={cn("h-8 w-8", styles.emptyIcon)} strokeWidth={1.5} />
+              <p className={cn("text-sm font-bold", styles.emptyTitle)}>
                 {highlighted ? "Solte o card aqui" : "Nenhum lead"}
               </p>
-              <p className="text-xs font-semibold text-foreground/70">
+              <p className={cn("text-xs font-semibold", styles.emptySubtitle)}>
                 Arraste cards para esta coluna
               </p>
             </div>
