@@ -6,7 +6,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kanban de Leads"
-        description="Arraste os cards para atualizar o status do funil"
+        description="Arraste os cards entre as colunas para mover no funil de vendas"
       />
       <KanbanBoard />
     </div>
