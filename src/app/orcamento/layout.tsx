@@ -5,5 +5,5 @@ export default function OrcamentoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <div className="orcamento-light min-h-[100dvh] bg-white">{children}</div>;
 }

@@ -108,7 +108,7 @@ export default function OrcamentoPage() {
 
   if (submitted) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-10 safe-bottom">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-white px-4 py-10 safe-bottom">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-elevated sm:p-10">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-3xl">
             ✓
@@ -126,7 +126,7 @@ export default function OrcamentoPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div className="min-h-[100dvh] bg-white">
       <div className="mx-auto w-full max-w-xl px-4 py-6 pb-32 sm:px-6 sm:py-10 sm:pb-16">
         <header className="mb-8 text-center">
           <div className="mx-auto mb-4 flex justify-center">
@@ -251,7 +251,7 @@ export default function OrcamentoPage() {
             </div>
           </section>
 
-          <div className="sticky bottom-0 -mx-4 border-t border-border/80 bg-background/95 px-4 py-4 backdrop-blur-md safe-bottom sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <div className="sticky bottom-0 -mx-4 border-t border-border/80 bg-white/95 px-4 py-4 backdrop-blur-md safe-bottom sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
             <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
               <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
               {loading ? "Enviando..." : "Solicitar orçamento no WhatsApp"}
