@@ -5,6 +5,7 @@ import { MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -182,7 +183,9 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="overflow-y-auto">
         <div className="p-5 pt-14 pb-8 sm:p-6 sm:pt-14">
-          <h2 className="font-display text-2xl font-bold text-foreground">{lead.name}</h2>
+          <DialogTitle className="font-display text-2xl font-bold text-foreground">
+            {lead.name}
+          </DialogTitle>
           <p className="text-sm font-medium text-muted-foreground">
             Chegou em{" "}
             {lead.arrived_at
@@ -275,7 +278,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
                   <div className="space-y-2">
                     <Label>Data e turnos do evento</Label>
-                    {lead.event_date && eventDate !== lead.event_date && (
+                    {lead.event_date && eventDate && eventDate !== lead.event_date && (
                       <p className="text-xs font-medium text-amber-800 bg-amber-50 rounded-lg px-2 py-1">
                         Data original do lead: {formatDate(lead.event_date)} → nova:{" "}
                         {formatDate(eventDate)}
@@ -461,7 +464,9 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
             </TabsContent>
 
             <TabsContent value="finance">
-              <LeadFinancial key={lead.id} lead={lead} onUpdate={onUpdate} />
+              {activeTab === "finance" && (
+                <LeadFinancial key={lead.id} lead={lead} onUpdate={onUpdate} />
+              )}
             </TabsContent>
           </Tabs>
         </div>

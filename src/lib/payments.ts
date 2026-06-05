@@ -195,11 +195,12 @@ export function allocatePayment(
 }
 
 export function describeAllocations(
-  allocations: PaymentAllocation[],
+  allocations: PaymentAllocation[] | unknown,
   records: PaymentRecordRow[]
 ): string {
-  if (!allocations.length) return "—";
-  return allocations
+  const list = Array.isArray(allocations) ? allocations : [];
+  if (!list.length) return "—";
+  return list
     .map((a) => {
       const r = records.find((rec) => rec.id === a.record_id);
       const name = r

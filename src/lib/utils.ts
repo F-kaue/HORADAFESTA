@@ -33,10 +33,14 @@ export function parseCurrencyBRL(formatted: string): number {
   return parseInt(digits, 10) / 100;
 }
 
-export function formatDate(date: string | Date) {
-  return new Intl.DateTimeFormat("pt-BR").format(
-    typeof date === "string" ? new Date(date + "T12:00:00") : date
-  );
+export function formatDate(date: string | Date | null | undefined) {
+  if (!date) return "—";
+  const parsed =
+    typeof date === "string"
+      ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date)
+      : date;
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR").format(parsed);
 }
 
 export function formatWhatsApp(phone: string) {
