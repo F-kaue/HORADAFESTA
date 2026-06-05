@@ -19,8 +19,10 @@ export async function GET(request: NextRequest) {
   const db = user ? supabase : admin;
 
   if (date) {
+    const excludeLeadId = searchParams.get("exclude_lead_id");
     const { data: slots } = await db.rpc("get_available_slots_shared", {
       check_date: date,
+      exclude_lead_id: excludeLeadId || null,
     });
 
     return NextResponse.json({ date, slots: slots ?? [] });

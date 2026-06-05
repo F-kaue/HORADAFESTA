@@ -3,7 +3,7 @@
 import { Calendar, MapPin, Users, MessageCircle, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, timeAgo } from "@/lib/utils";
-import { SLOT_LABELS, type SlotType } from "@/lib/slots";
+import { formatSlotsLabel, type SlotType } from "@/lib/slots";
 import { LEAD_STATUS_CONFIG, type Lead } from "@/types/database";
 import { KANBAN_CARD_ACCENT, KANBAN_COLUMN_STYLES } from "./kanban-styles";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -66,10 +66,10 @@ export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
             <Calendar className="h-4 w-4 shrink-0 text-primary" />
             <span>
               {formatDate(lead.event_date)}
-              {lead.slot_type && (
+              {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type) && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · {SLOT_LABELS[lead.slot_type as SlotType]}
+                  · {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)}
                 </span>
               )}
             </span>

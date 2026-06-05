@@ -1,27 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { SLOT_LABELS, type SlotType } from "@/lib/slots";
+import { cn, formatDate } from "@/lib/utils";
+import {
+  availabilityMap,
+  formatSlotsLabel,
+  SLOT_LABELS,
+  toggleSlotSelection,
+  type SlotType,
+} from "@/lib/slots";
 
-interface Props {
+interface BaseProps {
   selectedDate: string;
   onSelectDate: (date: string) => void;
+  excludeLeadId?: string;
+}
+
+interface SingleSelectProps extends BaseProps {
+  multiSelect?: false;
   selectedSlot: SlotType | "";
   onSelectSlot: (slot: SlotType) => void;
 }
 
-export function AvailabilityCalendar({
-  selectedDate,
-  onSelectDate,
-  selectedSlot,
-  onSelectSlot,
-}: Props) {
+interface MultiSelectProps extends BaseProps {
+  multiSelect: true;
+  selectedSlots: SlotType[];
+  onChangeSlots: (slots: SlotType[]) => void;
+}
+
+type Props = SingleSelectProps | MultiSelectProps;
+
+const SLOT_ORDER: SlotType[] = ["manha", "tarde", "noite", "dia_todo"];
+
+export function AvailabilityCalendar(props: Props) {
+  const { selectedDate, onSelectDate, excludeLeadId } = props;
+  const multiSelect = props.multiSelect === true;
+
   const [currentMonth, setCurrentMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const d = selectedDate ? new Date(selectedDate + "T12:00:00") : new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [dayStatus, setDayStatus] = useState<
     Record<string, "available" | "partial" | "full">
@@ -29,28 +48,45 @@ export function AvailabilityCalendar({
   const [availableSlots, setAvailableSlots] = useState<
     { slot: string; available: boolean }[]
   >([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingMonth, setLoadingMonth] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    const d = new Date(selectedDate + "T12:00:00");
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    setCurrentMonth((prev) => (prev === m ? prev : m));
+  }, [selectedDate]);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      setLoadingMonth(true);
       const res = await fetch(`/api/availability?month=${currentMonth}`);
       const data = await res.json();
       setDayStatus(data.days ?? {});
-      setLoading(false);
+      setLoadingMonth(false);
     };
     load();
   }, [currentMonth]);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate) {
+      setAvailableSlots([]);
+      return;
+    }
     const load = async () => {
-      const res = await fetch(`/api/availability?date=${selectedDate}`);
+      setLoadingSlots(true);
+      const params = new URLSearchParams({ date: selectedDate });
+      if (excludeLeadId) params.set("exclude_lead_id", excludeLeadId);
+      const res = await fetch(`/api/availability?${params}`);
       const data = await res.json();
       setAvailableSlots(data.slots ?? []);
+      setLoadingSlots(false);
     };
     load();
-  }, [selectedDate]);
+  }, [selectedDate, excludeLeadId]);
+
+  const availMap = useMemo(() => availabilityMap(availableSlots), [availableSlots]);
 
   const [year, month] = currentMonth.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -76,9 +112,29 @@ export function AvailabilityCalendar({
     year: "numeric",
   });
 
-  const formSlots = availableSlots.filter(
-    (s) => s.available && s.slot !== "dia_todo"
-  );
+  const formSlots = multiSelect
+    ? SLOT_ORDER.map((slot) => ({ slot, available: availMap[slot] ?? false }))
+    : availableSlots.filter((s) => s.available && s.slot !== "dia_todo");
+
+  const selectedSlots = multiSelect ? props.selectedSlots : [];
+  const selectionLabel = multiSelect ? formatSlotsLabel(selectedSlots) : "";
+
+  const handleDatePick = (dateStr: string) => {
+    onSelectDate(dateStr);
+    if (multiSelect) props.onChangeSlots([]);
+  };
+
+  const handleSlotClick = (slot: SlotType, isAvailable: boolean) => {
+    if (multiSelect) {
+      if (!isAvailable && !selectedSlots.includes(slot)) return;
+      props.onChangeSlots(
+        toggleSlotSelection(selectedSlots, slot, availMap)
+      );
+      return;
+    }
+    if (!isAvailable) return;
+    props.onSelectSlot(slot);
+  };
 
   return (
     <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-3 sm:p-4">
@@ -105,7 +161,7 @@ export function AvailabilityCalendar({
       <div
         className={cn(
           "grid grid-cols-7 gap-1 sm:gap-1.5",
-          loading && "pointer-events-none opacity-50"
+          loadingMonth && "pointer-events-none opacity-50"
         )}
       >
         {Array.from({ length: firstDay }).map((_, i) => (
@@ -124,7 +180,7 @@ export function AvailabilityCalendar({
               key={dateStr}
               type="button"
               disabled={disabled}
-              onClick={() => onSelectDate(dateStr)}
+              onClick={() => handleDatePick(dateStr)}
               className={cn(
                 "relative flex aspect-square min-h-[40px] w-full items-center justify-center rounded-lg text-sm font-semibold transition-all duration-200 sm:min-h-[44px]",
                 disabled && "cursor-not-allowed opacity-35 text-muted-foreground",
@@ -154,30 +210,80 @@ export function AvailabilityCalendar({
         </span>
       </div>
 
+      {selectedDate && (
+        <p className="text-sm font-semibold text-foreground">
+          Data: {formatDate(selectedDate)}
+        </p>
+      )}
+
       {selectedDate && formSlots.length > 0 && (
-        <div className="space-y-2 border-t border-border/60 pt-4">
-          <p className="text-sm font-semibold text-foreground">Horário do evento *</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {formSlots.map((s) => (
-              <button
-                key={s.slot}
-                type="button"
-                onClick={() => onSelectSlot(s.slot as SlotType)}
-                className={cn(
-                  "min-h-[48px] rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all duration-200",
-                  selectedSlot === s.slot
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-input bg-card text-foreground hover:border-primary/40"
-                )}
-              >
-                {SLOT_LABELS[s.slot as SlotType]}
-              </button>
-            ))}
+        <div
+          className={cn(
+            "space-y-2 border-t border-border/60 pt-4",
+            loadingSlots && "opacity-60"
+          )}
+        >
+          <p className="text-sm font-semibold text-foreground">
+            {multiSelect
+              ? "Turnos do evento * (pode escolher mais de um)"
+              : "Horário do evento *"}
+          </p>
+          {multiSelect && (
+            <p className="text-xs text-muted-foreground">
+              Turnos já reservados por outros eventos aparecem bloqueados. Combine
+              Manhã + Tarde, Tarde + Noite, ou use Dia todo se estiver livre.
+            </p>
+          )}
+          <div
+            className={cn(
+              "grid gap-2",
+              multiSelect ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"
+            )}
+          >
+            {formSlots.map((s) => {
+              const slot = s.slot as SlotType;
+              const isAvailable = s.available;
+              const isSelected = multiSelect
+                ? selectedSlots.includes(slot)
+                : props.selectedSlot === slot;
+
+              return (
+                <button
+                  key={s.slot}
+                  type="button"
+                  disabled={!multiSelect && !isAvailable}
+                  onClick={() => handleSlotClick(slot, isAvailable)}
+                  className={cn(
+                    "min-h-[48px] rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all duration-200",
+                    isSelected &&
+                      "border-primary bg-primary/10 text-primary",
+                    !isSelected &&
+                      isAvailable &&
+                      "border-input bg-card text-foreground hover:border-primary/40",
+                    !isSelected &&
+                      !isAvailable &&
+                      "cursor-not-allowed border-input/50 bg-muted/50 text-muted-foreground opacity-70"
+                  )}
+                >
+                  {SLOT_LABELS[slot]}
+                  {!isAvailable && (
+                    <span className="mt-0.5 block text-2xs font-bold uppercase text-danger">
+                      Ocupado
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
+          {multiSelect && selectionLabel && (
+            <p className="rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium text-primary">
+              Selecionado: {selectionLabel}
+            </p>
+          )}
         </div>
       )}
 
-      {selectedDate && formSlots.length === 0 && (
+      {selectedDate && !loadingSlots && formSlots.every((s) => !s.available) && (
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-semibold text-danger">
           Nenhum turno disponível nesta data. Escolha outra data.
         </p>

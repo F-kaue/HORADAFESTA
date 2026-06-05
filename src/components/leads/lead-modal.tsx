@@ -19,8 +19,14 @@ import {
   parseCurrencyBRL,
 } from "@/lib/utils";
 import { roundMoney, splitAmount } from "@/lib/payments";
-import { SLOT_LABELS, type SlotType } from "@/lib/slots";
+import {
+  derivedEventTimes,
+  formatSlotsLabel,
+  normalizeSlotSelection,
+  type SlotType,
+} from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { LeadFinancial } from "@/components/leads/lead-financial";
 import type { Lead, StatusHistory } from "@/types/database";
 import { toast } from "sonner";
@@ -40,9 +46,11 @@ function defaultFirstDueDate() {
 
 export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   const [history, setHistory] = useState<StatusHistory[]>([]);
-  const [confirmSlot, setConfirmSlot] = useState<SlotType>("tarde");
+  const [eventDate, setEventDate] = useState("");
+  const [confirmSlots, setConfirmSlots] = useState<SlotType[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [useCustomTimes, setUseCustomTimes] = useState(false);
   const [totalValue, setTotalValue] = useState("");
   const [downPayment, setDownPayment] = useState("");
   const [installments, setInstallments] = useState("5");
@@ -61,14 +69,40 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
     );
     setInternalNotes(lead.internal_notes ?? "");
-    setConfirmSlot((lead.slot_type as SlotType) || "tarde");
+    setEventDate(lead.event_date ?? "");
+    const initialSlots =
+      lead.slot_types?.length
+        ? normalizeSlotSelection(lead.slot_types as SlotType[])
+        : lead.slot_type
+          ? [lead.slot_type as SlotType]
+          : [];
+    setConfirmSlots(initialSlots);
     setStartTime(lead.event_start_time ?? "");
     setEndTime(lead.event_end_time ?? "");
+    setUseCustomTimes(Boolean(lead.event_start_time || lead.event_end_time));
     fetch(`/api/leads/${lead.id}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
       .catch(() => setHistory([]));
-  }, [lead?.id, lead?.total_value, lead?.internal_notes, lead?.slot_type, lead?.event_start_time, lead?.event_end_time]);
+  }, [
+    lead?.id,
+    lead?.total_value,
+    lead?.internal_notes,
+    lead?.slot_type,
+    lead?.slot_types,
+    lead?.event_date,
+    lead?.event_start_time,
+    lead?.event_end_time,
+  ]);
+
+  const suggestedTimes = useMemo(() => {
+    if (confirmSlots.length === 0) return null;
+    return derivedEventTimes(
+      confirmSlots,
+      useCustomTimes ? startTime : undefined,
+      useCustomTimes ? endTime : undefined
+    );
+  }, [confirmSlots, useCustomTimes, startTime, endTime]);
 
   const total = parseCurrencyBRL(totalValue);
   const entrada = parseCurrencyBRL(downPayment);
@@ -101,15 +135,31 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       toast.error("A entrada não pode ser maior que o total");
       return;
     }
+    if (!eventDate) {
+      toast.error("Selecione a data do evento");
+      return;
+    }
+    const slots = normalizeSlotSelection(confirmSlots);
+    if (slots.length === 0) {
+      toast.error("Selecione ao menos um turno disponível");
+      return;
+    }
+
+    const times = derivedEventTimes(
+      slots,
+      useCustomTimes ? startTime : undefined,
+      useCustomTimes ? endTime : undefined
+    );
 
     setConfirming(true);
     const res = await fetch(`/api/leads/${lead.id}/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        slot_type: confirmSlot,
-        event_start_time: startTime || undefined,
-        event_end_time: endTime || undefined,
+        event_date: eventDate,
+        slot_types: slots,
+        event_start_time: useCustomTimes ? times.start : undefined,
+        event_end_time: useCustomTimes ? times.end : undefined,
         total_value: amount,
         internal_notes: internalNotes || undefined,
         down_payment: entradaAmount,
@@ -153,7 +203,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                   ["WhatsApp", lead.whatsapp],
                   [
                     "Data",
-                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${lead.slot_type ? ` (${SLOT_LABELS[lead.slot_type as SlotType]})` : ""}`,
+                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type) ? ` (${formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)})` : ""}`,
                   ],
                   ["Local", `${lead.location} — ${lead.neighborhood}`],
                   ["Convidados", `~${lead.guest_count}`],
@@ -204,9 +254,10 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                       Valor fechado: {formatCurrency(Number(lead.total_value))}
                     </p>
                   )}
-                  {lead.slot_type && (
+                  {(lead.slot_types?.length || lead.slot_type) && (
                     <p className="text-sm text-muted-foreground">
-                      Turno: {SLOT_LABELS[lead.slot_type as SlotType]}
+                      {formatDate(lead.event_date ?? "")} ·{" "}
+                      {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)}
                       {lead.event_start_time && ` · ${lead.event_start_time}`}
                       {lead.event_end_time && ` – ${lead.event_end_time}`}
                     </p>
@@ -218,34 +269,66 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Defina horário, valor e plano de pagamento para confirmar o evento.
+                    Ajuste a data se mudou, escolha os turnos (bloqueados se já
+                    houver evento) e defina o pagamento.
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["manha", "tarde", "noite", "dia_todo"] as SlotType[]).map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setConfirmSlot(s)}
-                        className={`rounded-xl border-2 px-3 py-2 text-sm min-h-[44px] ${
-                          confirmSlot === s
-                            ? "border-primary bg-primary/5"
-                            : "border-input"
-                        }`}
-                      >
-                        {SLOT_LABELS[s]}
-                      </button>
-                    ))}
+
+                  <div className="space-y-2">
+                    <Label>Data e turnos do evento</Label>
+                    {lead.event_date && eventDate !== lead.event_date && (
+                      <p className="text-xs font-medium text-amber-800 bg-amber-50 rounded-lg px-2 py-1">
+                        Data original do lead: {formatDate(lead.event_date)} → nova:{" "}
+                        {formatDate(eventDate)}
+                      </p>
+                    )}
+                    <AvailabilityCalendar
+                      multiSelect
+                      selectedDate={eventDate}
+                      onSelectDate={setEventDate}
+                      selectedSlots={confirmSlots}
+                      onChangeSlots={setConfirmSlots}
+                      excludeLeadId={lead.id}
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Início (opcional)</Label>
-                      <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+
+                  {suggestedTimes && confirmSlots.length > 0 && (
+                    <p className="text-sm font-medium text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+                      Horário sugerido no calendário:{" "}
+                      <span className="text-foreground">
+                        {suggestedTimes.start} – {suggestedTimes.end}
+                      </span>
+                    </p>
+                  )}
+
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={useCustomTimes}
+                      onChange={(e) => setUseCustomTimes(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    Ajustar horário manualmente
+                  </label>
+                  {useCustomTimes && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Início</Label>
+                        <Input
+                          type="time"
+                          value={startTime || suggestedTimes?.start || ""}
+                          onChange={(e) => setStartTime(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Fim</Label>
+                        <Input
+                          type="time"
+                          value={endTime || suggestedTimes?.end || ""}
+                          onChange={(e) => setEndTime(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Fim (opcional)</Label>
-                      <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                    </div>
-                  </div>
+                  )}
 
                   <div className="space-y-4 rounded-2xl border-2 border-border bg-muted/30 p-4">
                     <p className="text-sm font-semibold text-foreground">

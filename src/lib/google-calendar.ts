@@ -1,4 +1,4 @@
-import { SLOT_TIMES, type SlotType } from "./slots";
+import { derivedEventTimes, type SlotType } from "./slots";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
@@ -96,16 +96,25 @@ export async function createGoogleCalendarEvent(
     title: string;
     description: string;
     date: string;
-    slotType: SlotType;
+    slotType?: SlotType;
+    slotTypes?: SlotType[];
     startTime?: string;
     endTime?: string;
     calendarId?: string;
   }
 ): Promise<string | null> {
   const tokens = await refreshAccessToken(tokenData as GoogleTokens);
-  const times = SLOT_TIMES[params.slotType];
-  const start = params.startTime || times.start;
-  const end = params.endTime || times.end;
+  const slots =
+    params.slotTypes?.length
+      ? params.slotTypes
+      : params.slotType
+        ? [params.slotType]
+        : (["tarde"] as SlotType[]);
+  const { start, end } = derivedEventTimes(
+    slots,
+    params.startTime,
+    params.endTime
+  );
 
   const startDateTime = `${params.date}T${start}:00`;
   const endDateTime = `${params.date}T${end}:00`;

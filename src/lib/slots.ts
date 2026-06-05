@@ -15,10 +15,104 @@ export const SLOT_TIMES: Record<SlotType, { start: string; end: string }> = {
 };
 
 export const ALL_SLOTS: SlotType[] = ["manha", "tarde", "noite"];
+export const PERIOD_SLOTS: SlotType[] = ["manha", "tarde", "noite"];
 
 export interface SlotAvailability {
   slot: SlotType;
   available: boolean;
+}
+
+/** Rótulo para um ou vários turnos (ex.: "Manhã + Tarde") */
+export function formatSlotsLabel(
+  slots: SlotType[] | null | undefined,
+  fallback?: SlotType | null
+): string {
+  const list = normalizeSlotSelection(
+    slots?.length ? slots : fallback ? [fallback] : []
+  );
+  if (list.length === 0) return "";
+  if (list.includes("dia_todo")) return SLOT_LABELS.dia_todo;
+  return PERIOD_SLOTS.filter((s) => list.includes(s))
+    .map((s) => SLOT_LABELS[s])
+    .join(" + ");
+}
+
+export function normalizeSlotSelection(selected: SlotType[]): SlotType[] {
+  if (selected.includes("dia_todo")) return ["dia_todo"];
+  return PERIOD_SLOTS.filter((s) => selected.includes(s));
+}
+
+export function availabilityMap(
+  rows: { slot: string; available: boolean }[]
+): Record<SlotType, boolean> {
+  const map = {} as Record<SlotType, boolean>;
+  for (const row of rows) {
+    map[row.slot as SlotType] = row.available;
+  }
+  return map;
+}
+
+export function toggleSlotSelection(
+  current: SlotType[],
+  slot: SlotType,
+  available: Record<SlotType, boolean>
+): SlotType[] {
+  if (slot === "dia_todo") {
+    if (current.includes("dia_todo")) return [];
+    if (!available.dia_todo) return current;
+    return ["dia_todo"];
+  }
+
+  let next = current.filter((s) => s !== "dia_todo");
+  if (next.includes(slot)) {
+    next = next.filter((s) => s !== slot);
+  } else if (available[slot]) {
+    next = [...next, slot];
+  }
+  return normalizeSlotSelection(next);
+}
+
+/** Horário sugerido ao combinar vários turnos */
+export function derivedEventTimes(
+  slots: SlotType[],
+  customStart?: string,
+  customEnd?: string
+): { start: string; end: string } {
+  if (customStart && customEnd) {
+    return { start: customStart, end: customEnd };
+  }
+  const normalized = normalizeSlotSelection(slots);
+  if (normalized.includes("dia_todo")) {
+    return {
+      start: customStart || SLOT_TIMES.dia_todo.start,
+      end: customEnd || SLOT_TIMES.dia_todo.end,
+    };
+  }
+  if (normalized.length === 0) {
+    return { start: customStart || "08:00", end: customEnd || "18:00" };
+  }
+  const starts = normalized.map((s) => SLOT_TIMES[s].start);
+  const ends = normalized.map((s) => SLOT_TIMES[s].end);
+  return {
+    start: customStart || starts.sort()[0],
+    end: customEnd || ends.sort().reverse()[0],
+  };
+}
+
+export function validateSlotsAgainstOccupied(
+  requested: SlotType[],
+  occupied: SlotType[]
+): { ok: true } | { ok: false; slot: SlotType } {
+  const normalized = normalizeSlotSelection(requested);
+  if (normalized.length === 0) {
+    return { ok: false, slot: "manha" };
+  }
+  const availability = computeAvailability(occupied);
+  for (const slot of normalized) {
+    const row = availability.find((a) => a.slot === slot);
+    if (!row?.available) return { ok: false, slot };
+  }
+  return { ok: true };
 }
 
 export function computeAvailability(

@@ -34,6 +34,7 @@ export interface Lead {
   whatsapp: string;
   event_date: string | null;
   slot_type: SlotType | null;
+  slot_types: SlotType[] | null;
   event_start_time: string | null;
   event_end_time: string | null;
   location: string | null;
