@@ -117,7 +117,7 @@ export function EventsView() {
     <div className="space-y-6">
       <PageHeader
         title="Agenda de Eventos"
-        description="Eventos confirmados sincronizados com o Google Calendar e o CRM."
+        description="Apenas eventos confirmados ativos — finalizados ficam no Kanban."
         action={
           <Button
             variant="outline"
@@ -194,7 +194,7 @@ export function EventsView() {
           {(
             [
               { id: "upcoming", label: "Próximos" },
-              { id: "past", label: "Realizados" },
+              { id: "past", label: "Já passaram" },
               { id: "all", label: "Todos" },
             ] as const
           ).map((f) => (

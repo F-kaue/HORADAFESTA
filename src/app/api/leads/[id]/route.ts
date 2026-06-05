@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { syncLeadGoogleCalendarFinalized } from "@/lib/google-calendar-finalize";
 
 export async function PATCH(
   request: NextRequest,
@@ -21,6 +22,15 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (body.status === "finalizado" && data) {
+    try {
+      await syncLeadGoogleCalendarFinalized(supabase, id);
+    } catch {
+      // sync opcional
+    }
+  }
+
   return NextResponse.json(data);
 }
 

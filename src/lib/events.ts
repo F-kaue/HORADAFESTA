@@ -1,5 +1,6 @@
 import type { Lead, LeadStatus } from "@/types/database";
 import type { GoogleCalendarEventRow } from "@/lib/google-calendar";
+import { extractClientNameFromSummary } from "@/lib/google-calendar";
 import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { formatSlotsLabel } from "@/lib/slots";
 
@@ -33,25 +34,47 @@ function parseTimeFromIso(iso: string): string | null {
 }
 
 function buildTitle(lead: Lead, google?: GoogleCalendarEventRow): string {
-  if (google?.summary) return google.summary;
+  if (google?.summary) {
+    return google.summary
+      .replace(/^🏁 REALIZADO · /, "")
+      .replace(/^✅ QUITADO · /, "");
+  }
   if (lead.event_type) return `🎉 ${lead.event_type} — ${lead.name}`;
   return lead.name;
+}
+
+function googleMatchesLead(g: GoogleCalendarEventRow, lead: Lead): boolean {
+  if (lead.google_event_id && lead.google_event_id === g.id) return true;
+  const gDate = g.start.slice(0, 10);
+  if (!lead.event_date || lead.event_date !== gDate) return false;
+  const nameFromTitle = extractClientNameFromSummary(g.summary);
+  if (!nameFromTitle) return false;
+  return lead.name.toLowerCase() === nameFromTitle.toLowerCase();
 }
 
 export function mergeAgendaEvents(
   leads: Lead[],
   googleEvents: GoogleCalendarEventRow[],
-  payments: Record<string, LeadPaymentSummary>
+  payments: Record<string, LeadPaymentSummary>,
+  suppressedLeads: Lead[] = []
 ): AgendaEvent[] {
   const googleById = new Map(googleEvents.map((g) => [g.id, g]));
   const usedGoogleIds = new Set<string>();
   const result: AgendaEvent[] = [];
 
+  const allLeadsForMatch = [...leads, ...suppressedLeads];
+
   for (const lead of leads) {
     if (!lead.event_date) continue;
-    const google = lead.google_event_id
+
+    let google = lead.google_event_id
       ? googleById.get(lead.google_event_id)
       : undefined;
+
+    if (!google) {
+      google = googleEvents.find((g) => googleMatchesLead(g, lead));
+    }
+
     if (google) usedGoogleIds.add(google.id);
 
     const pay = payments[lead.id] ?? null;
@@ -60,7 +83,7 @@ export function mergeAgendaEvents(
     result.push({
       id: lead.id,
       leadId: lead.id,
-      googleEventId: lead.google_event_id,
+      googleEventId: google?.id ?? lead.google_event_id,
       title: buildTitle(lead, google),
       description: google?.description ?? lead.observations,
       eventDate: lead.event_date,
@@ -87,6 +110,10 @@ export function mergeAgendaEvents(
 
   for (const g of googleEvents) {
     if (usedGoogleIds.has(g.id)) continue;
+
+    const matchedSuppressed = allLeadsForMatch.find((l) => googleMatchesLead(g, l));
+    if (matchedSuppressed) continue;
+
     const date = g.start.slice(0, 10);
     result.push({
       id: `google-${g.id}`,
@@ -102,7 +129,7 @@ export function mergeAgendaEvents(
       isPaid: g.summary.includes("QUITADO"),
       paymentSummary: null,
       status: null,
-      clientName: g.summary.replace(/^✅ QUITADO · /, "").replace(/^🎉 /, ""),
+      clientName: extractClientNameFromSummary(g.summary) ?? g.summary,
       whatsapp: null,
       eventType: null,
       location: null,

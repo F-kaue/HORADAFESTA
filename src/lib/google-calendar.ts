@@ -147,10 +147,62 @@ export async function createGoogleCalendarEvent(
 export function buildCalendarEventTitle(
   eventType: string,
   name: string,
-  isPaid: boolean
+  isPaid: boolean,
+  isFinalized = false
 ): string {
   const base = `🎉 ${eventType} — ${name}`;
-  return isPaid ? `✅ QUITADO · ${base}` : base;
+  const withPaid = isPaid ? `✅ QUITADO · ${base}` : base;
+  return isFinalized ? `🏁 REALIZADO · ${withPaid}` : withPaid;
+}
+
+/** Extrai nome do cliente do título do Google Calendar */
+export function extractClientNameFromSummary(summary: string): string | null {
+  const s = summary
+    .replace(/^✅ QUITADO · /, "")
+    .replace(/^🏁 REALIZADO · /, "")
+    .replace(/^🎉 /, "");
+  const idx = s.lastIndexOf(" — ");
+  if (idx >= 0) return s.slice(idx + 3).trim();
+  return s.trim() || null;
+}
+
+/** Atualiza título/cor do evento quando o lead é finalizado */
+export async function updateGoogleCalendarFinalizedStatus(
+  tokenData: Record<string, unknown>,
+  params: {
+    eventId: string;
+    calendarId?: string;
+    eventType: string;
+    leadName: string;
+    description?: string;
+    isPaid?: boolean;
+  }
+): Promise<boolean> {
+  const tokens = await refreshAccessToken(tokenData as GoogleTokens);
+  const calendarId = params.calendarId || "primary";
+
+  const res = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: buildCalendarEventTitle(
+          params.eventType,
+          params.leadName,
+          params.isPaid ?? false,
+          true
+        ),
+        description: params.description,
+        colorId: "8",
+      }),
+    }
+  );
+
+  return res.ok;
 }
 
 export function buildCalendarPaymentLine(

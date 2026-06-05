@@ -23,14 +23,23 @@ export async function GET(request: NextRequest) {
   const profile = await getBusinessProfile(supabase);
   const googleConnected = Boolean(profile?.google_calendar_token);
 
-  const { data: leads, error } = await supabase
-    .from("leads")
-    .select("*")
-    .in("status", ["confirmado", "finalizado"])
-    .is("archived_at", null)
-    .gte("event_date", from)
-    .lte("event_date", to)
-    .order("event_date", { ascending: true });
+  const [{ data: leads, error }, { data: suppressedLeads }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("*")
+      .eq("status", "confirmado")
+      .is("archived_at", null)
+      .gte("event_date", from)
+      .lte("event_date", to)
+      .order("event_date", { ascending: true }),
+    supabase
+      .from("leads")
+      .select("*")
+      .eq("status", "finalizado")
+      .is("archived_at", null)
+      .gte("event_date", from)
+      .lte("event_date", to),
+  ]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -54,7 +63,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const events = mergeAgendaEvents(leads ?? [], googleEvents, payments);
+  const events = mergeAgendaEvents(
+    leads ?? [],
+    googleEvents,
+    payments,
+    suppressedLeads ?? []
+  );
 
   return NextResponse.json({
     events,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { syncLeadGoogleCalendarFinalized } from "@/lib/google-calendar-finalize";
 
 function todayFortaleza(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -39,6 +40,14 @@ export async function POST() {
     .in("id", ids);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  for (const lead of leads) {
+    try {
+      await syncLeadGoogleCalendarFinalized(supabase, lead.id);
+    } catch {
+      // sync opcional
+    }
+  }
 
   return NextResponse.json({
     finalized: leads.length,
