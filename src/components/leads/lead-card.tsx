@@ -8,6 +8,7 @@ import {
   GripVertical,
   CheckCircle2,
   CircleDollarSign,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate, timeAgo } from "@/lib/utils";
@@ -16,6 +17,7 @@ import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { LEAD_STATUS_CONFIG, type Lead, type LeadStatus } from "@/types/database";
 import { KANBAN_CARD_ACCENT, KANBAN_COLUMN_STYLES } from "./kanban-styles";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { LeadActionsMenu } from "./lead-actions-menu";
 import { cn } from "@/lib/utils";
 
 interface LeadCardProps {
@@ -23,6 +25,11 @@ interface LeadCardProps {
   onOpen: (lead: Lead) => void;
   isDragging?: boolean;
   paymentSummary?: LeadPaymentSummary | null;
+  dragHandleProps?: Record<string, unknown>;
+  onArchive?: (lead: Lead) => void;
+  onUnarchive?: (lead: Lead) => void;
+  onFinalize?: (lead: Lead) => void;
+  onDelete?: (lead: Lead) => void;
 }
 
 function PaymentBadge({ summary }: { summary: LeadPaymentSummary }) {
@@ -30,7 +37,7 @@ function PaymentBadge({ summary }: { summary: LeadPaymentSummary }) {
 
   if (summary.status === "paid") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-2xs font-bold text-emerald-800 ring-1 ring-emerald-200">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-2xs font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:ring-emerald-700">
         <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden />
         Quitado
       </span>
@@ -39,7 +46,7 @@ function PaymentBadge({ summary }: { summary: LeadPaymentSummary }) {
 
   if (summary.status === "partial") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-bold text-amber-900 ring-1 ring-amber-200">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-bold text-amber-900 ring-1 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-200">
         <CircleDollarSign className="h-3 w-3 shrink-0" aria-hidden />
         Falta {formatCurrency(summary.remaining)}
       </span>
@@ -47,7 +54,7 @@ function PaymentBadge({ summary }: { summary: LeadPaymentSummary }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-2xs font-bold text-orange-900 ring-1 ring-orange-200">
+    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-2xs font-bold text-orange-900 ring-1 ring-orange-200 dark:bg-orange-900/40 dark:text-orange-200">
       <CircleDollarSign className="h-3 w-3 shrink-0" aria-hidden />
       A receber
     </span>
@@ -59,49 +66,81 @@ export function LeadCard({
   onOpen,
   isDragging,
   paymentSummary,
+  dragHandleProps,
+  onArchive,
+  onUnarchive,
+  onFinalize,
+  onDelete,
 }: LeadCardProps) {
   const statusKey = lead.status in LEAD_STATUS_CONFIG ? lead.status : "novo";
   const status = LEAD_STATUS_CONFIG[statusKey as LeadStatus];
   const badgeStyle = KANBAN_COLUMN_STYLES[statusKey as LeadStatus].badge;
   const showPayment =
-    lead.status === "confirmado" && paymentSummary && paymentSummary.status !== "none";
+    (lead.status === "confirmado" || lead.status === "finalizado") &&
+    paymentSummary &&
+    paymentSummary.status !== "none";
 
   const clientWa = buildWhatsAppUrl(
     lead.whatsapp,
     `Olá ${lead.name}! Aqui é da Hora da Festa 🎉`
   );
 
+  const hasActions = onArchive && onUnarchive && onFinalize && onDelete;
+
   return (
     <div
       className={cn(
-        "group cursor-grab rounded-xl border border-border/80 bg-card shadow-card transition-all duration-200",
+        "group rounded-xl border border-border/80 bg-card shadow-card transition-all duration-200",
         KANBAN_CARD_ACCENT[statusKey as LeadStatus],
         paymentSummary?.status === "paid" && "ring-1 ring-emerald-200/80",
+        lead.archived_at && "opacity-75",
         "hover:shadow-elevated hover:-translate-y-0.5",
         isDragging && "shadow-elevated ring-2 ring-primary/40",
-        "active:cursor-grabbing"
+        dragHandleProps && "cursor-default"
       )}
       onClick={() => onOpen(lead)}
     >
       <div className="flex items-start gap-2 p-4 pb-2">
-        <GripVertical
-          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60 group-hover:text-muted-foreground"
-          aria-hidden
-        />
+        <button
+          type="button"
+          className="mt-0.5 shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
+          aria-label="Arrastar card"
+          onClick={(e) => e.stopPropagation()}
+          {...dragHandleProps}
+        >
+          <GripVertical className="h-4 w-4" aria-hidden />
+        </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="truncate text-base font-bold text-foreground">{lead.name}</p>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-2xs font-bold",
-                  badgeStyle
+            <div className="flex shrink-0 items-start gap-1">
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-2xs font-bold",
+                    badgeStyle
+                  )}
+                >
+                  {status.label}
+                </span>
+                {showPayment && paymentSummary && (
+                  <PaymentBadge summary={paymentSummary} />
                 )}
-              >
-                {status.label}
-              </span>
-              {showPayment && paymentSummary && (
-                <PaymentBadge summary={paymentSummary} />
+                {lead.archived_at && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-2xs font-bold text-muted-foreground">
+                    <Archive className="h-3 w-3" />
+                    Arquivado
+                  </span>
+                )}
+              </div>
+              {hasActions && (
+                <LeadActionsMenu
+                  lead={lead}
+                  onArchive={onArchive}
+                  onUnarchive={onUnarchive}
+                  onFinalize={onFinalize}
+                  onDelete={onDelete}
+                />
               )}
             </div>
           </div>

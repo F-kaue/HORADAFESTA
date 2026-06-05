@@ -34,10 +34,17 @@ export const KANBAN_COLUMN_STYLES: Record<
   },
   confirmado: {
     header: "bg-emerald-600 text-white shadow-md ring-1 ring-emerald-700/30",
-    body: "bg-emerald-50/90 border-2 border-dashed border-emerald-200",
-    badge: "bg-emerald-100 text-emerald-900 border border-emerald-200",
+    body: "bg-emerald-50/90 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-200 dark:border-emerald-800",
+    badge: "bg-emerald-100 text-emerald-900 border border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:border-emerald-700",
     tabActive: "bg-emerald-600 text-white shadow-md",
-    tabInactive: "bg-emerald-50 text-emerald-900 border-2 border-emerald-200",
+    tabInactive: "bg-emerald-50 text-emerald-900 border-2 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-100 dark:border-emerald-800",
+  },
+  finalizado: {
+    header: "bg-violet-600 text-white shadow-md ring-1 ring-violet-700/30",
+    body: "bg-violet-50/90 dark:bg-violet-950/40 border-2 border-dashed border-violet-200 dark:border-violet-800",
+    badge: "bg-violet-100 text-violet-900 border border-violet-200 dark:bg-violet-900/50 dark:text-violet-100 dark:border-violet-700",
+    tabActive: "bg-violet-600 text-white shadow-md",
+    tabInactive: "bg-violet-50 text-violet-900 border-2 border-violet-200 dark:bg-violet-950/50 dark:text-violet-100 dark:border-violet-800",
   },
   nao_convertido: {
     header: "bg-red-600 text-white shadow-md ring-1 ring-red-700/30",
@@ -53,5 +60,6 @@ export const KANBAN_CARD_ACCENT: Record<LeadStatus, string> = {
   em_conversa: "border-l-4 border-l-amber-600",
   aguardando: "border-l-4 border-l-primary",
   confirmado: "border-l-4 border-l-emerald-600",
+  finalizado: "border-l-4 border-l-violet-600",
   nao_convertido: "border-l-4 border-l-red-600",
 };

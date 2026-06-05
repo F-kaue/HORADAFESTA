@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PartyPopper } from "lucide-react";
+import { BrandLogo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,9 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-background px-4 py-10">
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
         {[...Array(8)].map((_, i) => (
           <span
@@ -48,16 +52,9 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-7 shadow-elevated sm:p-9">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">
-            <PartyPopper className="h-7 w-7 text-primary" />
-          </div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-            Hora da Festa
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-muted-foreground">
-            Buffet & Eventos — CRM
-          </p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandLogo size="lg" className="mb-2" />
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">CRM · Buffet & Eventos</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

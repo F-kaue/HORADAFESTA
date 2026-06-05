@@ -45,12 +45,14 @@ export default async function DashboardPage() {
       .reduce((s, p) => s + Number(p.value), 0) ?? 0;
 
   const openLeads =
-    allLeads?.filter((l) => !["confirmado", "nao_convertido"].includes(l.status))
-      .length ?? 0;
+    allLeads?.filter(
+      (l) => !["confirmado", "finalizado", "nao_convertido"].includes(l.status)
+    ).length ?? 0;
 
   const total = allLeads?.length ?? 0;
   const converted =
-    allLeads?.filter((l) => l.status === "confirmado").length ?? 0;
+    allLeads?.filter((l) => ["confirmado", "finalizado"].includes(l.status))
+      .length ?? 0;
   const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0;
 
   const { data: upcoming } = await supabase

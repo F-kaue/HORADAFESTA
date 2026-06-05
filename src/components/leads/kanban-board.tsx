@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { LeadCard } from "./lead-card";
 import { LeadModal } from "./lead-modal";
+import { AddLeadButton } from "./add-lead-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -38,14 +39,16 @@ import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { LEAD_STATUS_CONFIG, EVENT_TYPES, type Lead, type LeadStatus } from "@/types/database";
 
 type PaymentFilter = "all" | "paid" | "owing";
+type ArchiveFilter = "active" | "archived" | "all";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const COLUMNS: LeadStatus[] = [
+const ALL_COLUMNS: LeadStatus[] = [
   "novo",
   "em_conversa",
   "aguardando",
   "confirmado",
+  "finalizado",
   "nao_convertido",
 ];
 
@@ -53,10 +56,18 @@ function SortableLeadCard({
   lead,
   onOpen,
   paymentSummary,
+  onArchive,
+  onUnarchive,
+  onFinalize,
+  onDelete,
 }: {
   lead: Lead;
   onOpen: (l: Lead) => void;
   paymentSummary?: LeadPaymentSummary | null;
+  onArchive: (l: Lead) => void;
+  onUnarchive: (l: Lead) => void;
+  onFinalize: (l: Lead) => void;
+  onDelete: (l: Lead) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: lead.id });
@@ -68,12 +79,17 @@ function SortableLeadCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes}>
       <LeadCard
         lead={lead}
         onOpen={onOpen}
         isDragging={isDragging}
         paymentSummary={paymentSummary}
+        dragHandleProps={listeners}
+        onArchive={onArchive}
+        onUnarchive={onUnarchive}
+        onFinalize={onFinalize}
+        onDelete={onDelete}
       />
     </div>
   );
@@ -85,12 +101,20 @@ function KanbanColumn({
   onOpen,
   isOver,
   paymentSummaries,
+  onArchive,
+  onUnarchive,
+  onFinalize,
+  onDelete,
 }: {
   status: LeadStatus;
   leads: Lead[];
   onOpen: (l: Lead) => void;
   isOver?: boolean;
   paymentSummaries: Record<string, LeadPaymentSummary>;
+  onArchive: (l: Lead) => void;
+  onUnarchive: (l: Lead) => void;
+  onFinalize: (l: Lead) => void;
+  onDelete: (l: Lead) => void;
 }) {
   const config = LEAD_STATUS_CONFIG[status];
   const styles = KANBAN_COLUMN_STYLES[status];
@@ -147,6 +171,10 @@ function KanbanColumn({
                 lead={lead}
                 onOpen={onOpen}
                 paymentSummary={paymentSummaries[lead.id]}
+                onArchive={onArchive}
+                onUnarchive={onUnarchive}
+                onFinalize={onFinalize}
+                onDelete={onDelete}
               />
             ))
           )}
@@ -171,9 +199,19 @@ export function KanbanBoard() {
   const [search, setSearch] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("active");
+  const [showFinalized, setShowFinalized] = useState(false);
   const [paymentSummaries, setPaymentSummaries] = useState<
     Record<string, LeadPaymentSummary>
   >({});
+
+  const visibleColumns = useMemo(
+    () =>
+      showFinalized
+        ? ALL_COLUMNS
+        : ALL_COLUMNS.filter((c) => c !== "finalizado"),
+    [showFinalized]
+  );
   const [mobileColumn, setMobileColumn] = useState<LeadStatus>("novo");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -229,6 +267,22 @@ export function KanbanBoard() {
 
       fetch("/api/payments/sync-calendar", { method: "POST" }).catch(() => {});
 
+      const finRes = await fetch("/api/leads/finalize-past", { method: "POST" });
+      if (finRes.ok) {
+        const finData = await finRes.json();
+        if (finData.finalized > 0) {
+          const { data: refreshed } = await supabase
+            .from("leads")
+            .select("*")
+            .order("arrived_at", { ascending: false });
+          if (refreshed) setLeads(refreshed as Lead[]);
+          toast.info(
+            `${finData.finalized} evento(s) movido(s) para Finalizado`,
+            { duration: 4000 }
+          );
+        }
+      }
+
       setRefreshing(false);
     },
     [supabase]
@@ -264,17 +318,77 @@ export function KanbanBoard() {
     if (search && !l.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (eventTypeFilter !== "all" && l.event_type !== eventTypeFilter) return false;
 
+    if (archiveFilter === "active" && l.archived_at) return false;
+    if (archiveFilter === "archived" && !l.archived_at) return false;
+
+    if (!showFinalized && l.status === "finalizado") return false;
+
     const pay = paymentSummaries[l.id];
     if (paymentFilter === "paid") {
       if (pay?.status !== "paid") return false;
     }
     if (paymentFilter === "owing") {
-      if (l.status !== "confirmado") return false;
+      if (l.status !== "confirmado" && l.status !== "finalizado") return false;
       if (!pay || pay.status === "paid" || pay.status === "none") return false;
     }
 
     return true;
   });
+
+  const patchLead = async (leadId: string, body: Record<string, unknown>) => {
+    const res = await fetch(`/api/leads/${leadId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar");
+    return res.json() as Promise<Lead>;
+  };
+
+  const handleArchive = async (lead: Lead) => {
+    try {
+      const updated = await patchLead(lead.id, { archived_at: new Date().toISOString() });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+      toast.success(`${lead.name} arquivado`);
+    } catch {
+      toast.error("Erro ao arquivar");
+    }
+  };
+
+  const handleUnarchive = async (lead: Lead) => {
+    try {
+      const updated = await patchLead(lead.id, { archived_at: null });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+      toast.success(`${lead.name} desarquivado`);
+    } catch {
+      toast.error("Erro ao desarquivar");
+    }
+  };
+
+  const handleFinalize = async (lead: Lead) => {
+    try {
+      const updated = await patchLead(lead.id, {
+        status: "finalizado",
+        finalized_at: new Date().toISOString(),
+      });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+      toast.success(`${lead.name} marcado como finalizado`);
+    } catch {
+      toast.error("Erro ao finalizar");
+    }
+  };
+
+  const handleDelete = async (lead: Lead) => {
+    if (!window.confirm(`Excluir permanentemente o lead "${lead.name}"?`)) return;
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setLeads((prev) => prev.filter((l) => l.id !== lead.id));
+      toast.success(`${lead.name} excluído`);
+    } catch {
+      toast.error("Erro ao excluir");
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -290,7 +404,7 @@ export function KanbanBoard() {
       return;
     }
     const id = String(overId);
-    if (COLUMNS.includes(id as LeadStatus)) {
+    if (ALL_COLUMNS.includes(id as LeadStatus)) {
       setOverColumnId(id as LeadStatus);
       return;
     }
@@ -307,7 +421,7 @@ export function KanbanBoard() {
     const leadId = String(active.id);
     let newStatus = over.id as LeadStatus;
 
-    if (!COLUMNS.includes(newStatus)) {
+    if (!ALL_COLUMNS.includes(newStatus)) {
       const overLead = leads.find((l) => l.id === over.id);
       if (overLead) newStatus = overLead.status;
       else return;
@@ -316,14 +430,23 @@ export function KanbanBoard() {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === newStatus) return;
 
+    const patch: Record<string, unknown> = { status: newStatus };
+    if (newStatus === "finalizado") {
+      patch.finalized_at = new Date().toISOString();
+    }
+
     setLeads((prev) =>
-      prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l))
+      prev.map((l) =>
+        l.id === leadId
+          ? { ...l, status: newStatus, finalized_at: patch.finalized_at as string | undefined ?? l.finalized_at }
+          : l
+      )
     );
 
     const res = await fetch(`/api/leads/${leadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(patch),
     });
 
     if (!res.ok) {
@@ -367,7 +490,7 @@ export function KanbanBoard() {
           value={paymentFilter}
           onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}
         >
-          <SelectTrigger className="w-full border-2 font-medium sm:w-[200px]">
+          <SelectTrigger className="w-full border-2 font-medium sm:w-[180px]">
             <SelectValue placeholder="Pagamento" />
           </SelectTrigger>
           <SelectContent>
@@ -376,6 +499,29 @@ export function KanbanBoard() {
             <SelectItem value="owing">⏳ Falta receber</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={archiveFilter}
+          onValueChange={(v) => setArchiveFilter(v as ArchiveFilter)}
+        >
+          <SelectTrigger className="w-full border-2 font-medium sm:w-[160px]">
+            <SelectValue placeholder="Arquivo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="archived">📦 Arquivados</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant={showFinalized ? "secondary" : "outline"}
+          size="sm"
+          className="border-2 font-semibold"
+          onClick={() => setShowFinalized((v) => !v)}
+        >
+          🏁 {showFinalized ? "Ocultar finalizados" : "Ver finalizados"}
+        </Button>
+        <AddLeadButton onCreated={() => loadLeads()} />
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {realtimeOn && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-2xs font-bold text-emerald-800">
@@ -409,7 +555,7 @@ export function KanbanBoard() {
       {/* Mobile */}
       <div className="lg:hidden">
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {COLUMNS.map((col) => {
+          {visibleColumns.map((col) => {
             const config = LEAD_STATUS_CONFIG[col];
             const styles = KANBAN_COLUMN_STYLES[col];
             const count = filtered.filter((l) => l.status === col).length;
@@ -457,6 +603,10 @@ export function KanbanBoard() {
                   lead={lead}
                   onOpen={setSelectedLead}
                   paymentSummary={paymentSummaries[lead.id]}
+                  onArchive={handleArchive}
+                  onUnarchive={handleUnarchive}
+                  onFinalize={handleFinalize}
+                  onDelete={handleDelete}
                 />
               ))
           )}
@@ -476,7 +626,7 @@ export function KanbanBoard() {
         }}
       >
         <div className="hidden lg:flex gap-4 overflow-x-auto pb-2 pt-1 scrollbar-thin">
-          {COLUMNS.map((status) => (
+          {visibleColumns.map((status) => (
             <KanbanColumn
               key={status}
               status={status}
@@ -484,6 +634,10 @@ export function KanbanBoard() {
               onOpen={setSelectedLead}
               isOver={overColumnId === status}
               paymentSummaries={paymentSummaries}
+              onArchive={handleArchive}
+              onUnarchive={handleUnarchive}
+              onFinalize={handleFinalize}
+              onDelete={handleDelete}
             />
           ))}
         </div>

@@ -5,6 +5,7 @@ import { Bell, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { Notification } from "@/types/database";
 
 interface HeaderProps {
@@ -56,6 +57,12 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  const clearAll = async () => {
+    await supabase.from("notifications").update({ read: true }).eq("read", false);
+    setNotifications([]);
+    setOpen(false);
+  };
+
   const unread = notifications.length;
 
   return (
@@ -69,6 +76,7 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
         </p>
       </div>
       <div className="flex items-center gap-1">
+        <ThemeToggle />
         <div className="relative">
           <Button
             variant="ghost"
@@ -85,6 +93,20 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
           </Button>
           {open && (
             <div className="absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] max-h-96 overflow-auto rounded-2xl border border-border bg-card shadow-elevated">
+              {notifications.length > 0 && (
+                <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {unread} não lida{unread !== 1 ? "s" : ""}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs font-bold text-primary hover:underline"
+                    onClick={clearAll}
+                  >
+                    Limpar todas
+                  </button>
+                </div>
+              )}
               {notifications.length === 0 ? (
                 <p className="p-4 text-sm font-medium text-muted-foreground">
                   Nenhuma notificação

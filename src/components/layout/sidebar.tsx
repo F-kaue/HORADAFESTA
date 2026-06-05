@@ -2,13 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  Wallet,
-  Settings,
-  PartyPopper,
-} from "lucide-react";
+import { LayoutDashboard, Users, Wallet, Settings } from "lucide-react";
+import { BrandLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -23,14 +18,8 @@ export function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/80 bg-card lg:flex">
-      <div className="flex h-[4.25rem] items-center gap-3 border-b border-border/80 px-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <PartyPopper className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <p className="font-display text-sm font-bold text-foreground">Hora da Festa</p>
-          <p className="text-xs font-semibold text-muted-foreground">CRM · Buffet</p>
-        </div>
+      <div className="flex h-[4.25rem] items-center border-b border-border/80 px-5">
+        <BrandLogo size="sm" />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {

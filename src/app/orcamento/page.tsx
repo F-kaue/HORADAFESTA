@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PartyPopper, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { BrandLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,17 +129,11 @@ export default function OrcamentoPage() {
     <div className="min-h-[100dvh] bg-background">
       <div className="mx-auto w-full max-w-xl px-4 py-6 pb-32 sm:px-6 sm:py-10 sm:pb-16">
         <header className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">
-            <PartyPopper className="h-7 w-7 text-primary" aria-hidden />
+          <div className="mx-auto mb-4 flex justify-center">
+            <BrandLogo size="lg" />
           </div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
             Bem-vindo(a)
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Hora da Festa
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-muted-foreground">
-            Buffet e Eventos
           </p>
           <p className="mx-auto mt-4 max-w-sm text-readable text-muted-foreground">
             Preencha o formulário para recebermos sua solicitação e montarmos um

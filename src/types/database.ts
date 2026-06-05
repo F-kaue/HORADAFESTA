@@ -3,6 +3,7 @@ export type LeadStatus =
   | "em_conversa"
   | "aguardando"
   | "confirmado"
+  | "finalizado"
   | "nao_convertido";
 
 export type SlotType = "manha" | "tarde" | "noite" | "dia_todo";
@@ -48,6 +49,8 @@ export interface Lead {
   arrived_at: string;
   confirmed_at: string | null;
   google_event_id: string | null;
+  archived_at: string | null;
+  finalized_at: string | null;
   created_at: string;
 }
 
@@ -132,6 +135,7 @@ export const LEAD_STATUS_CONFIG: Record<
   em_conversa: { label: "Em conversa", color: "bg-warning", emoji: "💬" },
   aguardando: { label: "Aguardando", color: "bg-primary", emoji: "⏳" },
   confirmado: { label: "Confirmado", color: "bg-success", emoji: "✅" },
+  finalizado: { label: "Finalizado", color: "bg-violet-600", emoji: "🏁" },
   nao_convertido: { label: "Não convertido", color: "bg-danger", emoji: "❌" },
 };
 

@@ -80,6 +80,9 @@ const config: Config = {
     "border-orange-200",
     "border-emerald-200",
     "border-red-200",
+    "bg-violet-600",
+    "bg-violet-50",
+    "border-violet-200",
   ],
   plugins: [],
 };
