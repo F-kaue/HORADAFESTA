@@ -222,6 +222,68 @@ export async function updateGoogleCalendarPaymentStatus(
   return res.ok;
 }
 
+export type GoogleCalendarEventRow = {
+  id: string;
+  summary: string;
+  description?: string;
+  htmlLink?: string;
+  colorId?: string;
+  start: string;
+  end: string;
+  isAllDay: boolean;
+};
+
+export async function listGoogleCalendarEvents(
+  tokenData: Record<string, unknown>,
+  params: { timeMin: string; timeMax: string; calendarId?: string }
+): Promise<GoogleCalendarEventRow[]> {
+  const tokens = await refreshAccessToken(tokenData as GoogleTokens);
+  const calendarId = params.calendarId || "primary";
+
+  const res = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?` +
+      new URLSearchParams({
+        timeMin: params.timeMin,
+        timeMax: params.timeMax,
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults: "250",
+      }),
+    {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    }
+  );
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  return (data.items ?? []).map(
+    (ev: {
+      id: string;
+      summary?: string;
+      description?: string;
+      htmlLink?: string;
+      colorId?: string;
+      start?: { dateTime?: string; date?: string };
+      end?: { dateTime?: string; date?: string };
+    }) => {
+      const startRaw = ev.start?.dateTime || ev.start?.date || "";
+      const endRaw = ev.end?.dateTime || ev.end?.date || "";
+      const isAllDay = !ev.start?.dateTime;
+      return {
+        id: ev.id,
+        summary: ev.summary ?? "Sem título",
+        description: ev.description,
+        htmlLink: ev.htmlLink,
+        colorId: ev.colorId,
+        start: startRaw,
+        end: endRaw,
+        isAllDay,
+      };
+    }
+  );
+}
+
 export function getGoogleAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
