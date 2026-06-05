@@ -3,8 +3,8 @@
 import { Calendar, MapPin, Users, MessageCircle, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, timeAgo } from "@/lib/utils";
-import { formatSlotsLabel, type SlotType } from "@/lib/slots";
-import { LEAD_STATUS_CONFIG, type Lead } from "@/types/database";
+import { formatSlotsLabel } from "@/lib/slots";
+import { LEAD_STATUS_CONFIG, type Lead, type LeadStatus } from "@/types/database";
 import { KANBAN_CARD_ACCENT, KANBAN_COLUMN_STYLES } from "./kanban-styles";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,9 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
-  const status = LEAD_STATUS_CONFIG[lead.status];
-  const badgeStyle = KANBAN_COLUMN_STYLES[lead.status].badge;
+  const statusKey = lead.status in LEAD_STATUS_CONFIG ? lead.status : "novo";
+  const status = LEAD_STATUS_CONFIG[statusKey as LeadStatus];
+  const badgeStyle = KANBAN_COLUMN_STYLES[statusKey as LeadStatus].badge;
 
   const clientWa = buildWhatsAppUrl(
     lead.whatsapp,
@@ -28,7 +29,7 @@ export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
     <div
       className={cn(
         "group cursor-grab rounded-xl border border-border/80 bg-card shadow-card transition-all duration-200",
-        KANBAN_CARD_ACCENT[lead.status],
+        KANBAN_CARD_ACCENT[statusKey as LeadStatus],
         "hover:shadow-elevated hover:-translate-y-0.5",
         isDragging && "shadow-elevated ring-2 ring-primary/40",
         "active:cursor-grabbing"
@@ -66,10 +67,10 @@ export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
             <Calendar className="h-4 w-4 shrink-0 text-primary" />
             <span>
               {formatDate(lead.event_date)}
-              {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type) && (
+              {formatSlotsLabel(lead.slot_types, lead.slot_type) && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)}
+                  · {formatSlotsLabel(lead.slot_types, lead.slot_type)}
                 </span>
               )}
             </span>

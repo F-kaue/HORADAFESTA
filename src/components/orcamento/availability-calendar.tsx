@@ -116,24 +116,24 @@ export function AvailabilityCalendar(props: Props) {
     ? SLOT_ORDER.map((slot) => ({ slot, available: availMap[slot] ?? false }))
     : availableSlots.filter((s) => s.available && s.slot !== "dia_todo");
 
-  const selectedSlots = multiSelect ? props.selectedSlots : [];
+  const selectedSlots = multiSelect ? (props.selectedSlots ?? []) : [];
   const selectionLabel = multiSelect ? formatSlotsLabel(selectedSlots) : "";
 
   const handleDatePick = (dateStr: string) => {
     onSelectDate(dateStr);
-    if (multiSelect) props.onChangeSlots([]);
+    if (multiSelect) props.onChangeSlots?.([]);
   };
 
   const handleSlotClick = (slot: SlotType, isAvailable: boolean) => {
     if (multiSelect) {
       if (!isAvailable && !selectedSlots.includes(slot)) return;
-      props.onChangeSlots(
+      props.onChangeSlots?.(
         toggleSlotSelection(selectedSlots, slot, availMap)
       );
       return;
     }
     if (!isAvailable) return;
-    props.onSelectSlot(slot);
+    props.onSelectSlot?.(slot);
   };
 
   return (

@@ -23,8 +23,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { Search, Inbox, RefreshCw, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import dynamic from "next/dynamic";
 import { LeadCard } from "./lead-card";
-import { LeadModal } from "./lead-modal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,6 +37,11 @@ import { KANBAN_COLUMN_STYLES } from "./kanban-styles";
 import { LEAD_STATUS_CONFIG, EVENT_TYPES, type Lead, type LeadStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const LeadModal = dynamic(
+  () => import("./lead-modal").then((m) => m.LeadModal),
+  { ssr: false }
+);
 
 const COLUMNS: LeadStatus[] = [
   "novo",

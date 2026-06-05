@@ -23,6 +23,7 @@ import {
   derivedEventTimes,
   formatSlotsLabel,
   normalizeSlotSelection,
+  parseLeadSlotTypes,
   type SlotType,
 } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -62,21 +63,17 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   const [firstDueDate, setFirstDueDate] = useState(defaultFirstDueDate);
   const [internalNotes, setInternalNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
 
   useEffect(() => {
     if (!lead?.id) return;
+    setActiveTab("info");
     setTotalValue(
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
     );
     setInternalNotes(lead.internal_notes ?? "");
     setEventDate(lead.event_date ?? "");
-    const initialSlots =
-      lead.slot_types?.length
-        ? normalizeSlotSelection(lead.slot_types as SlotType[])
-        : lead.slot_type
-          ? [lead.slot_type as SlotType]
-          : [];
-    setConfirmSlots(initialSlots);
+    setConfirmSlots(parseLeadSlotTypes(lead.slot_types, lead.slot_type));
     setStartTime(lead.event_start_time ?? "");
     setEndTime(lead.event_end_time ?? "");
     setUseCustomTimes(Boolean(lead.event_start_time || lead.event_end_time));
@@ -187,10 +184,13 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
         <div className="p-5 pt-14 pb-8 sm:p-6 sm:pt-14">
           <h2 className="font-display text-2xl font-bold text-foreground">{lead.name}</h2>
           <p className="text-sm font-medium text-muted-foreground">
-            Chegou em {formatDate(lead.arrived_at.slice(0, 10))}
+            Chegou em{" "}
+            {lead.arrived_at
+              ? formatDate(String(lead.arrived_at).slice(0, 10))
+              : "—"}
           </p>
 
-          <Tabs defaultValue="info" className="mt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="info">Informações</TabsTrigger>
               <TabsTrigger value="confirm">Confirmação</TabsTrigger>
@@ -203,7 +203,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                   ["WhatsApp", lead.whatsapp],
                   [
                     "Data",
-                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type) ? ` (${formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)})` : ""}`,
+                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${formatSlotsLabel(lead.slot_types, lead.slot_type) ? ` (${formatSlotsLabel(lead.slot_types, lead.slot_type)})` : ""}`,
                   ],
                   ["Local", `${lead.location} — ${lead.neighborhood}`],
                   ["Convidados", `~${lead.guest_count}`],
@@ -254,10 +254,10 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                       Valor fechado: {formatCurrency(Number(lead.total_value))}
                     </p>
                   )}
-                  {(lead.slot_types?.length || lead.slot_type) && (
+                  {formatSlotsLabel(lead.slot_types, lead.slot_type) && (
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(lead.event_date ?? "")} ·{" "}
-                      {formatSlotsLabel(lead.slot_types as SlotType[] | null, lead.slot_type)}
+                      {lead.event_date ? formatDate(lead.event_date) : "—"} ·{" "}
+                      {formatSlotsLabel(lead.slot_types, lead.slot_type)}
                       {lead.event_start_time && ` · ${lead.event_start_time}`}
                       {lead.event_end_time && ` – ${lead.event_end_time}`}
                     </p>
@@ -281,14 +281,16 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                         {formatDate(eventDate)}
                       </p>
                     )}
-                    <AvailabilityCalendar
-                      multiSelect
-                      selectedDate={eventDate}
-                      onSelectDate={setEventDate}
-                      selectedSlots={confirmSlots}
-                      onChangeSlots={setConfirmSlots}
-                      excludeLeadId={lead.id}
-                    />
+                    {activeTab === "confirm" && (
+                      <AvailabilityCalendar
+                        multiSelect
+                        selectedDate={eventDate}
+                        onSelectDate={setEventDate}
+                        selectedSlots={confirmSlots}
+                        onChangeSlots={setConfirmSlots}
+                        excludeLeadId={lead.id}
+                      />
+                    )}
                   </div>
 
                   {suggestedTimes && confirmSlots.length > 0 && (

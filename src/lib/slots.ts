@@ -22,14 +22,45 @@ export interface SlotAvailability {
   available: boolean;
 }
 
+const VALID_SLOTS = new Set<string>(["manha", "tarde", "noite", "dia_todo"]);
+
+function isSlotType(value: unknown): value is SlotType {
+  return typeof value === "string" && VALID_SLOTS.has(value);
+}
+
+/** Normaliza slot_types do Supabase (array, string PG, ou slot_type único) */
+export function parseLeadSlotTypes(
+  slotTypes: unknown,
+  fallback?: SlotType | null
+): SlotType[] {
+  if (Array.isArray(slotTypes)) {
+    const fromArray = slotTypes.filter(isSlotType);
+    if (fromArray.length > 0) return normalizeSlotSelection(fromArray);
+  }
+
+  if (typeof slotTypes === "string") {
+    const trimmed = slotTypes.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      const inner = trimmed.slice(1, -1).trim();
+      if (!inner) return fallback && isSlotType(fallback) ? [fallback] : [];
+      const fromPg = inner
+        .split(",")
+        .map((s) => s.trim().replace(/^"|"$/g, ""))
+        .filter(isSlotType);
+      if (fromPg.length > 0) return normalizeSlotSelection(fromPg);
+    }
+    if (isSlotType(trimmed)) return [trimmed];
+  }
+
+  return fallback && isSlotType(fallback) ? [fallback] : [];
+}
+
 /** Rótulo para um ou vários turnos (ex.: "Manhã + Tarde") */
 export function formatSlotsLabel(
-  slots: SlotType[] | null | undefined,
+  slots: unknown,
   fallback?: SlotType | null
 ): string {
-  const list = normalizeSlotSelection(
-    slots?.length ? slots : fallback ? [fallback] : []
-  );
+  const list = parseLeadSlotTypes(slots, fallback);
   if (list.length === 0) return "";
   if (list.includes("dia_todo")) return SLOT_LABELS.dia_todo;
   return PERIOD_SLOTS.filter((s) => list.includes(s))
@@ -38,6 +69,7 @@ export function formatSlotsLabel(
 }
 
 export function normalizeSlotSelection(selected: SlotType[]): SlotType[] {
+  if (!Array.isArray(selected)) return [];
   if (selected.includes("dia_todo")) return ["dia_todo"];
   return PERIOD_SLOTS.filter((s) => selected.includes(s));
 }
