@@ -20,11 +20,13 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <Sidebar />
-      <div className="lg:pl-64">
+      <div className="lg:pl-[17rem]">
         <Header userName={userName} />
-        <main className="pb-24 lg:pb-8 px-4 md:px-6 py-6">{children}</main>
+        <main className="app-page px-4 py-5 pb-28 sm:px-6 sm:py-6 lg:pb-8">
+          {children}
+        </main>
       </div>
       <BottomNav />
     </div>

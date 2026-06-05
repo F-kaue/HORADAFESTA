@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PartyPopper } from "lucide-react";
+import { PartyPopper, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,24 @@ import { buildOrcamentoMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { EVENT_TYPES } from "@/types/database";
 import type { SlotType } from "@/lib/slots";
 import { toast } from "sonner";
+
+function FormField({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {children}
+      {hint && <p className="text-xs font-medium text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
 
 export default function OrcamentoPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -89,15 +107,17 @@ export default function OrcamentoPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface px-4">
-        <div className="max-w-md text-center rounded-2xl border bg-white p-10 shadow-warm">
-          <div className="text-5xl mb-4">✅</div>
-          <h1 className="font-display text-2xl font-bold text-secondary">
-            Sua solicitação foi enviada!
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-10 safe-bottom">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-elevated sm:p-10">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-3xl">
+            ✓
+          </div>
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            Solicitação enviada!
           </h1>
-          <p className="mt-3 text-muted-foreground">
-            Em breve entraremos em contato. Se o WhatsApp não abriu, verifique
-            se o app está instalado.
+          <p className="mt-3 text-readable text-muted-foreground">
+            Em breve entraremos em contato. Se o WhatsApp não abriu, verifique se o
+            aplicativo está instalado no seu celular.
           </p>
         </div>
       </div>
@@ -105,123 +125,146 @@ export default function OrcamentoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
-      <div className="mx-auto max-w-lg px-4 py-8 pb-16">
+    <div className="min-h-[100dvh] bg-background">
+      <div className="mx-auto w-full max-w-xl px-4 py-6 pb-32 sm:px-6 sm:py-10 sm:pb-16">
         <header className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-            <PartyPopper className="h-7 w-7 text-primary" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">
+            <PartyPopper className="h-7 w-7 text-primary" aria-hidden />
           </div>
-          <p className="text-sm font-medium text-primary">🎉 BEM-VINDO(A) AO</p>
-          <h1 className="font-display text-2xl font-bold text-secondary md:text-3xl">
-            HORA DA FESTA
-          </h1>
-          <p className="text-sm font-semibold tracking-wide text-muted-foreground">
-            BUFFET E EVENTOS
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Bem-vindo(a)
           </p>
-          <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-            Para agilizar seu orçamento e garantir uma proposta perfeita para o
-            seu evento, preencha abaixo:
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Hora da Festa
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">
+            Buffet e Eventos
+          </p>
+          <p className="mx-auto mt-4 max-w-sm text-readable text-muted-foreground">
+            Preencha o formulário para recebermos sua solicitação e montarmos um
+            orçamento sob medida para o seu evento.
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border bg-white p-6 shadow-card">
-          <div className="space-y-2">
-            <Label>👤 Seu nome completo *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Maria Silva"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>📱 Seu WhatsApp *</Label>
-            <Input
-              type="tel"
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(maskWhatsApp(e.target.value))}
-              placeholder="(85) 99999-9999"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>📅 Data do evento *</Label>
-            <AvailabilityCalendar
-              selectedDate={eventDate}
-              onSelectDate={(d) => {
-                setEventDate(d);
-                setSlotType("");
-              }}
-              selectedSlot={slotType}
-              onSelectSlot={setSlotType}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>📍 Local do evento *</Label>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Salão das Flores"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Bairro *</Label>
-            <Input
-              value={neighborhood}
-              onChange={(e) => setNeighborhood(e.target.value)}
-              placeholder="Meireles"
-              required
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Label>👥 Número estimado de convidados: ~{guestCount}</Label>
-            <Slider
-              min={50}
-              max={500}
-              step={10}
-              value={[guestCount]}
-              onValueChange={([v]) => setGuestCount(v)}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>50</span>
-              <span>500+</span>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <section className="form-section">
+            <p className="form-section-title mb-4">Seus dados</p>
+            <div className="space-y-4">
+              <FormField label="Nome completo *">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Maria Silva"
+                  required
+                  autoComplete="name"
+                />
+              </FormField>
+              <FormField label="WhatsApp *" hint="Com DDD — usamos para retornar o contato">
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(maskWhatsApp(e.target.value))}
+                  placeholder="(85) 99999-9999"
+                  required
+                  autoComplete="tel"
+                />
+              </FormField>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <Label>🎂 Tipo de evento *</Label>
-            <Select value={eventType} onValueChange={setEventType} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <section className="form-section">
+            <p className="form-section-title mb-4">Data e horário</p>
+            <FormField label="Data do evento *">
+              <AvailabilityCalendar
+                selectedDate={eventDate}
+                onSelectDate={(d) => {
+                  setEventDate(d);
+                  setSlotType("");
+                }}
+                selectedSlot={slotType}
+                onSelectSlot={setSlotType}
+              />
+            </FormField>
+          </section>
 
-          <div className="space-y-2">
-            <Label>💬 Observações adicionais</Label>
-            <Textarea
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Algum detalhe especial? Ex: tema, restrições alimentares..."
-            />
-          </div>
+          <section className="form-section">
+            <p className="form-section-title mb-4">Local do evento</p>
+            <div className="space-y-4">
+              <FormField label="Nome do local *">
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Salão das Flores"
+                  required
+                />
+              </FormField>
+              <FormField label="Bairro *">
+                <Input
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  placeholder="Meireles"
+                  required
+                />
+              </FormField>
+            </div>
+          </section>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? "Enviando..." : "📲 Solicitar Orçamento pelo WhatsApp"}
-          </Button>
+          <section className="form-section">
+            <p className="form-section-title mb-4">Detalhes do evento</p>
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <Label>Convidados estimados</Label>
+                <p className="font-display text-2xl font-bold text-primary">
+                  ~{guestCount} pessoas
+                </p>
+                <Slider
+                  min={50}
+                  max={500}
+                  step={10}
+                  value={[guestCount]}
+                  onValueChange={([v]) => setGuestCount(v)}
+                />
+                <div className="flex justify-between text-xs font-semibold text-muted-foreground">
+                  <span>50</span>
+                  <span>500+</span>
+                </div>
+              </div>
+
+              <FormField label="Tipo de evento *">
+                <Select value={eventType} onValueChange={setEventType} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EVENT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+
+              <FormField label="Observações" hint="Opcional — tema, restrições, preferências">
+                <Textarea
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  placeholder="Conte mais sobre o que você imagina para a festa..."
+                />
+              </FormField>
+            </div>
+          </section>
+
+          <div className="sticky bottom-0 -mx-4 border-t border-border/80 bg-background/95 px-4 py-4 backdrop-blur-md safe-bottom sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+            <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
+              <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
+              {loading ? "Enviando..." : "Solicitar orçamento no WhatsApp"}
+            </Button>
+            <p className="mt-2 text-center text-2xs font-medium text-muted-foreground sm:text-xs">
+              Ao enviar, você será redirecionado(a) para o WhatsApp da equipe.
+            </p>
+          </div>
         </form>
       </div>
     </div>

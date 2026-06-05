@@ -86,9 +86,9 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="overflow-y-auto">
-        <div className="p-6 pt-12">
-          <h2 className="font-display text-2xl font-bold">{lead.name}</h2>
-          <p className="text-sm text-muted-foreground">
+        <div className="p-5 pt-14 pb-8 sm:p-6 sm:pt-14">
+          <h2 className="font-display text-2xl font-bold text-foreground">{lead.name}</h2>
+          <p className="text-sm font-medium text-muted-foreground">
             Chegou em {formatDate(lead.arrived_at.slice(0, 10))}
           </p>
 
@@ -100,15 +100,27 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
-              <dl className="space-y-3 text-sm">
-                <div><dt className="text-muted-foreground">WhatsApp</dt><dd>{lead.whatsapp}</dd></div>
-                <div><dt className="text-muted-foreground">Data</dt><dd>{lead.event_date ? formatDate(lead.event_date) : "—"} {lead.slot_type && `(${SLOT_LABELS[lead.slot_type as SlotType]})`}</dd></div>
-                <div><dt className="text-muted-foreground">Local</dt><dd>{lead.location} — {lead.neighborhood}</dd></div>
-                <div><dt className="text-muted-foreground">Convidados</dt><dd>~{lead.guest_count}</dd></div>
-                <div><dt className="text-muted-foreground">Tipo</dt><dd>{lead.event_type}</dd></div>
-                {lead.observations && (
-                  <div><dt className="text-muted-foreground">Observações</dt><dd>{lead.observations}</dd></div>
-                )}
+              <dl className="space-y-4 text-sm">
+                {[
+                  ["WhatsApp", lead.whatsapp],
+                  [
+                    "Data",
+                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${lead.slot_type ? ` (${SLOT_LABELS[lead.slot_type as SlotType]})` : ""}`,
+                  ],
+                  ["Local", `${lead.location} — ${lead.neighborhood}`],
+                  ["Convidados", `~${lead.guest_count}`],
+                  ["Tipo", lead.event_type],
+                  ...(lead.observations
+                    ? [["Observações", lead.observations] as [string, string]]
+                    : []),
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      {label}
+                    </dt>
+                    <dd className="mt-1 font-medium text-foreground">{value}</dd>
+                  </div>
+                ))}
               </dl>
 
               <Button asChild className="w-full">

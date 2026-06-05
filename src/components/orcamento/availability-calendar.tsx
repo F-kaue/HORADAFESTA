@@ -81,27 +81,31 @@ export function AvailabilityCalendar({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="icon" onClick={prevMonth}>
+    <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Button type="button" variant="ghost" size="icon" onClick={prevMonth} aria-label="Mês anterior">
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <span className="font-display font-semibold capitalize">{monthLabel}</span>
-        <Button type="button" variant="ghost" size="icon" onClick={nextMonth}>
+        <span className="font-display text-sm font-bold capitalize text-foreground sm:text-base">
+          {monthLabel}
+        </span>
+        <Button type="button" variant="ghost" size="icon" onClick={nextMonth} aria-label="Próximo mês">
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
+      <div className="grid grid-cols-7 gap-1 text-center text-2xs font-bold uppercase tracking-wide text-muted-foreground sm:text-xs">
         {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-          <div key={d}>{d}</div>
+          <div key={d} className="py-1">
+            {d}
+          </div>
         ))}
       </div>
 
       <div
         className={cn(
-          "grid grid-cols-7 gap-1",
-          loading && "opacity-50 pointer-events-none"
+          "grid grid-cols-7 gap-1 sm:gap-1.5",
+          loading && "pointer-events-none opacity-50"
         )}
       >
         {Array.from({ length: firstDay }).map((_, i) => (
@@ -122,10 +126,10 @@ export function AvailabilityCalendar({
               disabled={disabled}
               onClick={() => onSelectDate(dateStr)}
               className={cn(
-                "relative flex h-10 w-full items-center justify-center rounded-lg text-sm transition-all duration-200",
-                disabled && "cursor-not-allowed opacity-40",
-                selected && "bg-primary text-white shadow-warm",
-                !selected && !disabled && "hover:bg-muted",
+                "relative flex aspect-square min-h-[40px] w-full items-center justify-center rounded-lg text-sm font-semibold transition-all duration-200 sm:min-h-[44px]",
+                disabled && "cursor-not-allowed opacity-35 text-muted-foreground",
+                selected && "bg-primary text-primary-foreground shadow-warm",
+                !selected && !disabled && "bg-card text-foreground hover:bg-primary/10",
                 status === "partial" && !selected && "ring-2 ring-accent ring-inset"
               )}
             >
@@ -138,21 +142,21 @@ export function AvailabilityCalendar({
         })}
       </div>
 
-      <div className="flex gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-success" /> Disponível
+      <div className="flex flex-wrap gap-3 text-xs font-semibold text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-success" /> Disponível
         </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-accent" /> Parcial
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-accent" /> Parcial
         </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-danger" /> Lotado
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-danger" /> Lotado
         </span>
       </div>
 
       {selectedDate && formSlots.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">🕢 Horário do evento</p>
+        <div className="space-y-2 border-t border-border/60 pt-4">
+          <p className="text-sm font-semibold text-foreground">Horário do evento *</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {formSlots.map((s) => (
               <button
@@ -160,10 +164,10 @@ export function AvailabilityCalendar({
                 type="button"
                 onClick={() => onSelectSlot(s.slot as SlotType)}
                 className={cn(
-                  "rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px]",
+                  "min-h-[48px] rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all duration-200",
                   selectedSlot === s.slot
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-input hover:border-primary/50"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-input bg-card text-foreground hover:border-primary/40"
                 )}
               >
                 {SLOT_LABELS[s.slot as SlotType]}
@@ -174,7 +178,7 @@ export function AvailabilityCalendar({
       )}
 
       {selectedDate && formSlots.length === 0 && (
-        <p className="text-sm text-danger">
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-semibold text-danger">
           Nenhum turno disponível nesta data. Escolha outra data.
         </p>
       )}

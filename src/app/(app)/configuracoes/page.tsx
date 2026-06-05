@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,10 +111,11 @@ function ConfiguracoesContent() {
   const isGoogleConnected = !!profile.google_calendar_token;
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <h1 className="font-display text-2xl font-bold text-secondary">
-        Configurações
-      </h1>
+    <div className="mx-auto max-w-2xl space-y-6 sm:space-y-8">
+      <PageHeader
+        title="Configurações"
+        description="Perfil, agenda, WhatsApp e integrações"
+      />
 
       <Card>
         <CardHeader>

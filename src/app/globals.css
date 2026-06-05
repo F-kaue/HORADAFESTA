@@ -4,39 +4,82 @@
 
 @layer base {
   :root {
-    --background: 30 100% 98%;
-    --foreground: 240 29% 14%;
+    --background: 30 33% 97%;
+    --foreground: 234 32% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 240 29% 14%;
-    --muted: 30 40% 94%;
-    --muted-foreground: 240 10% 40%;
-    --border: 30 30% 90%;
-    --input: 30 30% 90%;
-    --ring: 16 78% 54%;
-  }
-
-  .dark {
-    --background: 240 29% 10%;
-    --foreground: 30 100% 98%;
-    --card: 240 29% 14%;
-    --card-foreground: 30 100% 98%;
-    --muted: 240 20% 20%;
-    --muted-foreground: 30 20% 70%;
-    --border: 240 20% 22%;
-    --input: 240 20% 22%;
-    --ring: 16 78% 54%;
+    --card-foreground: 234 32% 12%;
+    --muted: 30 25% 92%;
+    --muted-foreground: 234 14% 32%;
+    --border: 30 18% 86%;
+    --input: 30 18% 86%;
+    --ring: 16 78% 48%;
+    --radius: 0.75rem;
   }
 
   * {
     @apply border-border;
   }
 
-  body {
-    @apply bg-surface text-foreground font-sans antialiased;
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
 
-  h1, h2, h3, h4 {
-    @apply font-display;
+  body {
+    @apply bg-background text-foreground font-sans antialiased text-[15px] leading-relaxed md:text-base;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display font-semibold tracking-tight text-foreground;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm font-medium text-muted-foreground sm:text-base;
+  }
+
+  .form-section {
+    @apply space-y-4 rounded-2xl border border-border/80 bg-card p-4 shadow-card sm:p-5;
+  }
+
+  .form-section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  .text-readable {
+    @apply text-[15px] leading-relaxed text-foreground/90 sm:text-base;
+  }
+
+  .stat-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .stat-value {
+    @apply font-display text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  .app-page {
+    @apply mx-auto w-full max-w-7xl space-y-6 sm:space-y-8;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-pb {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
 
@@ -47,10 +90,17 @@
 }
 
 @keyframes confetti-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
-  50% { transform: translateY(-12px) rotate(8deg); opacity: 0.7; }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
+    opacity: 0.45;
+  }
 }
 
 .animate-confetti {
-  animation: confetti-float 6s ease-in-out infinite;
+  animation: confetti-float 8s ease-in-out infinite;
 }

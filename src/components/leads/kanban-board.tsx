@@ -186,15 +186,15 @@ export function KanbanBoard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
           placeholder="Buscar por nome..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-          <SelectTrigger className="max-w-[200px]">
+          <SelectTrigger className="w-full sm:max-w-[220px]">
             <SelectValue placeholder="Tipo de evento" />
           </SelectTrigger>
           <SelectContent>
@@ -210,22 +210,37 @@ export function KanbanBoard() {
 
       {/* Mobile: tabs por coluna */}
       <div className="lg:hidden">
-        <div className="flex gap-1 overflow-x-auto pb-2">
-          {COLUMNS.map((col) => (
-            <button
-              key={col}
-              type="button"
-              onClick={() => setMobileColumn(col)}
-              className={cn(
-                "shrink-0 rounded-lg px-3 py-2 text-xs font-medium min-h-[44px]",
-                mobileColumn === col
-                  ? "bg-primary text-white"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {LEAD_STATUS_CONFIG[col].emoji}
-            </button>
-          ))}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+          {COLUMNS.map((col) => {
+            const config = LEAD_STATUS_CONFIG[col];
+            const count = filtered.filter((l) => l.status === col).length;
+            return (
+              <button
+                key={col}
+                type="button"
+                onClick={() => setMobileColumn(col)}
+                className={cn(
+                  "flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-2.5 min-h-[52px] min-w-[4.5rem] text-center transition-colors",
+                  mobileColumn === col
+                    ? "bg-primary text-primary-foreground shadow-warm"
+                    : "border border-border bg-card text-muted-foreground"
+                )}
+              >
+                <span className="text-base leading-none">{config.emoji}</span>
+                <span className="text-2xs font-bold leading-tight sm:text-xs">
+                  {config.label}
+                </span>
+                <span
+                  className={cn(
+                    "text-2xs font-semibold",
+                    mobileColumn === col ? "text-white/80" : "text-muted-foreground"
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <div className="space-y-3 mt-2">
           {filtered

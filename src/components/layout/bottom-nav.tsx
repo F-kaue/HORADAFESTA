@@ -16,8 +16,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white lg:hidden safe-area-pb">
-      <div className="flex items-center justify-around px-2 py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 bg-card/95 backdrop-blur-md lg:hidden safe-area-pb">
+      <div className="grid grid-cols-4 gap-0.5 px-1 py-1.5">
         {navItems.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
@@ -25,12 +25,14 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 text-xs transition-colors",
-                active ? "text-primary" : "text-muted-foreground"
+                "flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-2xs font-semibold transition-colors sm:text-xs",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <item.icon className={cn("h-5 w-5", active && "text-primary")} />
-              <span className="font-medium">{item.label}</span>
+              <span>{item.label}</span>
             </Link>
           );
         })}

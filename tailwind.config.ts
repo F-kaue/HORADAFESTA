@@ -11,21 +11,21 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#E8612C",
+          DEFAULT: "#D94E1F",
           foreground: "#FFFFFF",
         },
         secondary: {
           DEFAULT: "#1A1A2E",
-          foreground: "#FFF8F3",
+          foreground: "#F8FAFC",
         },
         accent: {
-          DEFAULT: "#F9C846",
+          DEFAULT: "#E8A317",
           foreground: "#1A1A2E",
         },
-        surface: "#FFF8F3",
-        success: "#2ECC71",
-        warning: "#F39C12",
-        danger: "#E74C3C",
+        surface: "#F7F4F0",
+        success: "#16A34A",
+        warning: "#D97706",
+        danger: "#DC2626",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -41,19 +41,27 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        display: ["var(--font-playfair)", "Georgia", "serif"],
-        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-jakarta)", "system-ui", "sans-serif"],
+        sans: ["var(--font-jakarta)", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       borderRadius: {
-        lg: "12px",
-        xl: "16px",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        warm: "0 4px 24px -4px rgba(232, 97, 44, 0.15)",
-        card: "0 2px 12px -2px rgba(26, 26, 46, 0.08)",
+        warm: "0 8px 30px -8px rgba(217, 78, 31, 0.22)",
+        card: "0 1px 3px rgba(26, 26, 46, 0.06), 0 8px 24px -6px rgba(26, 26, 46, 0.08)",
+        elevated: "0 12px 40px -12px rgba(26, 26, 46, 0.15)",
       },
       transitionDuration: {
         DEFAULT: "200ms",
+      },
+      spacing: {
+        "safe-b": "env(safe-area-inset-bottom)",
       },
     },
   },

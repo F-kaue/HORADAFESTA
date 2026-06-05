@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MetricsCards } from "@/components/dashboard/metrics-cards";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { WeekAgenda } from "@/components/dashboard/week-agenda";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { SLOT_LABELS, type SlotType } from "@/lib/slots";
@@ -100,8 +101,11 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="font-display text-2xl font-bold text-secondary">Dashboard</h1>
+    <div className="space-y-6 sm:space-y-8">
+      <PageHeader
+        title="Dashboard"
+        description="Visão geral do seu negócio e próximos eventos"
+      />
 
       <MetricsCards
         eventsThisMonth={eventsThisMonth}
@@ -110,7 +114,7 @@ export default async function DashboardPage() {
         conversionRate={conversionRate}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Agenda da semana</CardTitle>
@@ -136,23 +140,25 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {!upcoming?.length ? (
-            <p className="text-sm text-muted-foreground">Nenhum evento próximo</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Nenhum evento próximo
+            </p>
           ) : (
-            <ul className="divide-y">
+            <ul className="divide-y divide-border/80">
               {upcoming.map((lead) => (
                 <li
                   key={lead.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0"
                 >
-                  <div>
-                    <p className="font-medium">{lead.name}</p>
-                    <p className="text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{lead.name}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
                       {lead.event_date && formatDate(lead.event_date)}
                       {lead.slot_type &&
                         ` · ${SLOT_LABELS[lead.slot_type as SlotType]}`}
                     </p>
                   </div>
-                  <p className="font-semibold text-primary">
+                  <p className="shrink-0 font-display text-base font-bold text-primary sm:text-lg">
                     {lead.total_value
                       ? formatCurrency(Number(lead.total_value))
                       : "—"}

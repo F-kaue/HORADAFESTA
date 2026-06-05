@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Lead } from "@/types/database";
@@ -114,45 +115,44 @@ export default function FinanceiroPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-2xl font-bold text-secondary">
-          Financeiro
-        </h1>
-        <Button variant="outline" onClick={exportCsv}>
-          Exportar CSV
-        </Button>
-      </div>
+    <div className="space-y-6 sm:space-y-8">
+      <PageHeader
+        title="Financeiro"
+        description="Receitas, pendências e exportação de dados"
+        action={
+          <Button variant="outline" onClick={exportCsv} className="w-full sm:w-auto">
+            Exportar CSV
+          </Button>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground">Valor médio / evento</p>
-            <p className="font-display text-xl font-bold">
-              {formatCurrency(avgValue)}
-            </p>
+          <CardContent className="p-4 sm:p-5">
+            <p className="stat-label">Valor médio / evento</p>
+            <p className="stat-value mt-1 text-lg sm:text-xl">{formatCurrency(avgValue)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground">Total recebido</p>
-            <p className="font-display text-xl font-bold text-success">
+          <CardContent className="p-4 sm:p-5">
+            <p className="stat-label">Total recebido</p>
+            <p className="stat-value mt-1 text-lg text-success sm:text-xl">
               {formatCurrency(received)}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground">A receber</p>
-            <p className="font-display text-xl font-bold text-warning">
+          <CardContent className="p-4 sm:p-5">
+            <p className="stat-label">A receber</p>
+            <p className="stat-value mt-1 text-lg text-warning sm:text-xl">
               {formatCurrency(pending)}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground">Eventos confirmados</p>
-            <p className="font-display text-xl font-bold">{leads.length}</p>
+          <CardContent className="p-4 sm:p-5">
+            <p className="stat-label">Eventos confirmados</p>
+            <p className="stat-value mt-1 text-lg sm:text-xl">{leads.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -169,7 +169,7 @@ export default function FinanceiroPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                <Bar dataKey="revenue" fill="#E8612C" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="revenue" fill="#D94E1F" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -227,11 +227,11 @@ export default function FinanceiroPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 pr-4">Cliente</th>
-                <th className="py-2 pr-4">Data</th>
-                <th className="py-2 pr-4">Valor total</th>
-                <th className="py-2">Status</th>
+              <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="py-3 pr-4">Cliente</th>
+                <th className="py-3 pr-4">Data</th>
+                <th className="py-3 pr-4">Valor total</th>
+                <th className="py-3">Status</th>
               </tr>
             </thead>
             <tbody>

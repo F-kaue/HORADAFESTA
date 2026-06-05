@@ -30,12 +30,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-surface px-4">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {[...Array(12)].map((_, i) => (
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-background px-4 py-10">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
+        {[...Array(8)].map((_, i) => (
           <span
             key={i}
-            className="animate-confetti absolute text-2xl opacity-30"
+            className="animate-confetti absolute text-xl"
             style={{
               left: `${(i * 17) % 100}%`,
               top: `${(i * 23) % 100}%`,
@@ -47,15 +47,15 @@ export default function LoginPage() {
         ))}
       </div>
 
-      <div className="relative w-full max-w-md rounded-2xl border bg-white p-8 shadow-warm">
+      <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-7 shadow-elevated sm:p-9">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <PartyPopper className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">
+            <PartyPopper className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-secondary">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
             Hora da Festa
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">
             Buffet & Eventos — CRM
           </p>
         </div>

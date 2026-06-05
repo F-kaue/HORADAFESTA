@@ -22,16 +22,14 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r bg-white">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/80 bg-card lg:flex">
+      <div className="flex h-[4.25rem] items-center gap-3 border-b border-border/80 px-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <PartyPopper className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <p className="font-display text-sm font-semibold text-secondary">
-            Hora da Festa
-          </p>
-          <p className="text-xs text-muted-foreground">CRM</p>
+          <p className="font-display text-sm font-bold text-foreground">Hora da Festa</p>
+          <p className="text-xs font-semibold text-muted-foreground">CRM · Buffet</p>
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-4">
@@ -42,13 +40,13 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200",
                 active
-                  ? "bg-primary text-white shadow-warm"
+                  ? "bg-primary text-primary-foreground shadow-warm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-5 w-5 shrink-0" />
               {item.label}
             </Link>
           );

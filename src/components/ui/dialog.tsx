@@ -17,7 +17,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-secondary/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-secondary/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -36,19 +36,19 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 gap-4 border bg-white shadow-lg transition ease-in-out duration-200",
+        "fixed z-50 gap-4 border border-border bg-card shadow-elevated transition ease-in-out duration-200",
         side === "center" &&
-          "left-[50%] top-[50%] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-xl p-6",
+          "left-[50%] top-[50%] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-2xl p-6",
         side === "right" &&
-          "inset-y-0 right-0 h-full w-full max-w-lg border-l rounded-none md:rounded-l-xl p-0 data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
+          "inset-y-0 right-0 h-[100dvh] w-full max-w-lg border-l p-0 data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:rounded-l-2xl",
         side === "bottom" &&
-          "inset-x-0 bottom-0 max-h-[90vh] w-full rounded-t-2xl p-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom md:hidden",
+          "inset-x-0 bottom-0 max-h-[92dvh] w-full rounded-t-2xl p-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom md:hidden",
         className
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+      <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-xl bg-muted p-2 text-foreground transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring">
         <X className="h-5 w-5" />
         <span className="sr-only">Fechar</span>
       </DialogPrimitive.Close>

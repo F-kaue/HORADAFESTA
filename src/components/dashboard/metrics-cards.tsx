@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { CalendarCheck, CircleDollarSign, ClipboardList, TrendingUp } from "lucide-react";
 
 interface MetricsCardsProps {
   eventsThisMonth: number;
@@ -15,22 +16,40 @@ export function MetricsCards({
   conversionRate,
 }: MetricsCardsProps) {
   const cards = [
-    { emoji: "🎉", label: "Eventos este mês", value: String(eventsThisMonth) },
-    { emoji: "💰", label: "Receita do mês", value: formatCurrency(revenueThisMonth) },
-    { emoji: "📋", label: "Leads em aberto", value: String(openLeads) },
-    { emoji: "✅", label: "Taxa de conversão", value: `${conversionRate}%` },
+    {
+      icon: CalendarCheck,
+      label: "Eventos este mês",
+      value: String(eventsThisMonth),
+      accent: "text-primary",
+    },
+    {
+      icon: CircleDollarSign,
+      label: "Receita do mês",
+      value: formatCurrency(revenueThisMonth),
+      accent: "text-success",
+    },
+    {
+      icon: ClipboardList,
+      label: "Leads em aberto",
+      value: String(openLeads),
+      accent: "text-secondary",
+    },
+    {
+      icon: TrendingUp,
+      label: "Taxa de conversão",
+      value: `${conversionRate}%`,
+      accent: "text-accent",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {cards.map((c) => (
-        <Card key={c.label}>
-          <CardContent className="p-5">
-            <span className="text-2xl">{c.emoji}</span>
-            <p className="mt-2 text-xs text-muted-foreground">{c.label}</p>
-            <p className="font-display text-xl font-bold text-secondary mt-1">
-              {c.value}
-            </p>
+        <Card key={c.label} className="overflow-hidden">
+          <CardContent className="p-4 sm:p-5">
+            <c.icon className={cn("h-5 w-5", c.accent)} aria-hidden />
+            <p className="stat-label mt-3">{c.label}</p>
+            <p className="stat-value mt-1 text-xl sm:text-2xl">{c.value}</p>
           </CardContent>
         </Card>
       ))}

@@ -59,14 +59,16 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
   const unread = notifications.length;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/95 px-4 backdrop-blur md:px-6">
-      <div>
-        <p className="text-xs text-muted-foreground">Bem-vinda,</p>
-        <p className="font-display text-lg font-semibold text-secondary">
+    <header className="sticky top-0 z-30 flex h-[4.25rem] items-center justify-between border-b border-border/80 bg-card/95 px-4 backdrop-blur-md sm:px-6">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Bem-vinda
+        </p>
+        <p className="truncate font-display text-lg font-bold text-foreground sm:text-xl">
           {userName}
         </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <div className="relative">
           <Button
             variant="ghost"
@@ -74,7 +76,7 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
             onClick={() => setOpen(!open)}
             aria-label="Notificações"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-5 w-5 text-foreground" />
             {unread > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                 {unread > 9 ? "9+" : unread}
@@ -82,9 +84,9 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
             )}
           </Button>
           {open && (
-            <div className="absolute right-0 top-12 w-80 max-h-96 overflow-auto rounded-xl border bg-white shadow-lg">
+            <div className="absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] max-h-96 overflow-auto rounded-2xl border border-border bg-card shadow-elevated">
               {notifications.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">
+                <p className="p-4 text-sm font-medium text-muted-foreground">
                   Nenhuma notificação
                 </p>
               ) : (
@@ -92,11 +94,11 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
                   <button
                     key={n.id}
                     type="button"
-                    className="w-full border-b p-4 text-left text-sm hover:bg-muted transition-colors"
+                    className="w-full border-b border-border/60 p-4 text-left transition-colors hover:bg-muted"
                     onClick={() => markRead(n.id)}
                   >
-                    <p className="font-medium">{n.title}</p>
-                    <p className="text-muted-foreground">{n.message}</p>
+                    <p className="text-sm font-semibold text-foreground">{n.title}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{n.message}</p>
                   </button>
                 ))
               )}
@@ -104,7 +106,7 @@ export function Header({ userName = "Usuária" }: HeaderProps) {
           )}
         </div>
         <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sair">
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 text-foreground" />
         </Button>
       </div>
     </header>
