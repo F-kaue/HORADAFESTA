@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import {
   Dialog,
@@ -12,7 +12,13 @@ import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, formatCurrencyInput, parseCurrencyBRL } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate,
+  formatCurrencyInput,
+  parseCurrencyBRL,
+} from "@/lib/utils";
+import { roundMoney, splitAmount } from "@/lib/payments";
 import { SLOT_LABELS, type SlotType } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { LeadFinancial } from "@/components/leads/lead-financial";
@@ -26,12 +32,26 @@ interface LeadModalProps {
   onUpdate: () => void;
 }
 
+function defaultFirstDueDate() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   const [history, setHistory] = useState<StatusHistory[]>([]);
   const [confirmSlot, setConfirmSlot] = useState<SlotType>("tarde");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [totalValue, setTotalValue] = useState("");
+  const [downPayment, setDownPayment] = useState("");
+  const [installments, setInstallments] = useState("5");
+  const [paymentType, setPaymentType] = useState<"avista" | "parcelado">("parcelado");
+  const [downPaymentPaid, setDownPaymentPaid] = useState(false);
+  const [downPaymentPaidDate, setDownPaymentPaidDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
+  );
+  const [firstDueDate, setFirstDueDate] = useState(defaultFirstDueDate);
   const [internalNotes, setInternalNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
 
@@ -41,11 +61,27 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
     );
     setInternalNotes(lead.internal_notes ?? "");
+    setConfirmSlot((lead.slot_type as SlotType) || "tarde");
+    setStartTime(lead.event_start_time ?? "");
+    setEndTime(lead.event_end_time ?? "");
     fetch(`/api/leads/${lead.id}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
       .catch(() => setHistory([]));
-  }, [lead?.id, lead?.total_value, lead?.internal_notes]);
+  }, [lead?.id, lead?.total_value, lead?.internal_notes, lead?.slot_type, lead?.event_start_time, lead?.event_end_time]);
+
+  const total = parseCurrencyBRL(totalValue);
+  const entrada = parseCurrencyBRL(downPayment);
+  const remainingPlan = roundMoney(Math.max(0, total - entrada));
+
+  const preview = useMemo(() => {
+    if (total <= 0) return null;
+    const parcelCount =
+      paymentType === "avista" ? 1 : Math.max(1, parseInt(installments, 10) || 1);
+    const parcelValues =
+      remainingPlan > 0 ? splitAmount(remainingPlan, parcelCount) : [];
+    return { parcelCount, parcelValues, remaining: remainingPlan, entrada };
+  }, [total, entrada, remainingPlan, paymentType, installments]);
 
   if (!lead) return null;
 
@@ -56,10 +92,16 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
   const handleConfirm = async () => {
     const amount = parseCurrencyBRL(totalValue);
+    const entradaAmount = parseCurrencyBRL(downPayment);
     if (amount <= 0) {
       toast.error("Informe o valor total");
       return;
     }
+    if (entradaAmount > amount) {
+      toast.error("A entrada não pode ser maior que o total");
+      return;
+    }
+
     setConfirming(true);
     const res = await fetch(`/api/leads/${lead.id}/confirm`, {
       method: "POST",
@@ -70,6 +112,12 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
         event_end_time: endTime || undefined,
         total_value: amount,
         internal_notes: internalNotes || undefined,
+        down_payment: entradaAmount,
+        installments: parseInt(installments, 10) || 1,
+        payment_type: paymentType,
+        down_payment_paid: entradaAmount > 0 ? downPaymentPaid : false,
+        down_payment_paid_date: downPaymentPaid ? downPaymentPaidDate : undefined,
+        first_installment_due_date: firstDueDate,
       }),
     });
     const data = await res.json();
@@ -149,11 +197,28 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
             <TabsContent value="confirm" className="space-y-4">
               {lead.status === "confirmado" ? (
-                <p className="text-success font-medium">✅ Evento já confirmado</p>
+                <div className="space-y-3">
+                  <p className="text-success font-medium">✅ Evento já confirmado</p>
+                  {lead.total_value != null && (
+                    <p className="text-sm font-medium text-foreground">
+                      Valor fechado: {formatCurrency(Number(lead.total_value))}
+                    </p>
+                  )}
+                  {lead.slot_type && (
+                    <p className="text-sm text-muted-foreground">
+                      Turno: {SLOT_LABELS[lead.slot_type as SlotType]}
+                      {lead.event_start_time && ` · ${lead.event_start_time}`}
+                      {lead.event_end_time && ` – ${lead.event_end_time}`}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Pagamentos, entrada e recebimentos estão na aba Financeiro.
+                  </p>
+                </div>
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Defina horário e valor para confirmar o evento.
+                    Defina horário, valor e plano de pagamento para confirmar o evento.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {(["manha", "tarde", "noite", "dia_todo"] as SlotType[]).map((s) => (
@@ -181,14 +246,114 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                       <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                     </div>
                   </div>
-                  <div>
-                    <Label>Valor total fechado</Label>
-                    <CurrencyInput
-                      value={totalValue}
-                      onValueChange={setTotalValue}
-                      placeholder="R$ 5.000,00"
-                    />
+
+                  <div className="space-y-4 rounded-2xl border-2 border-border bg-muted/30 p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      Contrato e pagamento
+                    </p>
+                    <div>
+                      <Label>Valor total fechado *</Label>
+                      <CurrencyInput
+                        value={totalValue}
+                        onValueChange={setTotalValue}
+                        placeholder="R$ 5.000,00"
+                      />
+                    </div>
+                    <div>
+                      <Label>Entrada (sinal)</Label>
+                      <CurrencyInput
+                        value={downPayment}
+                        onValueChange={setDownPayment}
+                        placeholder="R$ 0,00"
+                      />
+                    </div>
+                    {entrada > 0 && (
+                      <label className="flex items-center gap-2 text-sm font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={downPaymentPaid}
+                          onChange={(e) => setDownPaymentPaid(e.target.checked)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        Entrada já recebida
+                      </label>
+                    )}
+                    {downPaymentPaid && entrada > 0 && (
+                      <div>
+                        <Label>Data da entrada</Label>
+                        <Input
+                          type="date"
+                          value={downPaymentPaidDate}
+                          onChange={(e) => setDownPaymentPaidDate(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={paymentType === "avista" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setPaymentType("avista")}
+                      >
+                        Saldo à vista
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentType === "parcelado" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setPaymentType("parcelado")}
+                      >
+                        Saldo parcelado
+                      </Button>
+                    </div>
+                    {paymentType === "parcelado" && remainingPlan > 0 && (
+                      <>
+                        <div>
+                          <Label>Parcelas do saldo</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={installments}
+                            onChange={(e) => setInstallments(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>1ª parcela vence em</Label>
+                          <Input
+                            type="date"
+                            value={firstDueDate}
+                            onChange={(e) => setFirstDueDate(e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+                    {preview && total > 0 && (
+                      <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-3 text-sm font-medium">
+                        <p className="font-bold">Resumo</p>
+                        <p>
+                          Total {formatCurrency(total)} · Entrada{" "}
+                          {formatCurrency(preview.entrada)}
+                        </p>
+                        <p>
+                          Saldo {formatCurrency(preview.remaining)} em{" "}
+                          {paymentType === "parcelado"
+                            ? `${preview.parcelCount}x de ~${formatCurrency(
+                                preview.parcelValues[0] ?? 0
+                              )}`
+                            : "1 pagamento"}
+                        </p>
+                        {entrada > 0 && downPaymentPaid && (
+                          <p className="text-emerald-700 text-xs mt-1">
+                            Entrada será registrada como recebida na confirmação.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
+
                   <div>
                     <Label>Observações internas</Label>
                     <Textarea
@@ -204,7 +369,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                   >
                     {confirming
                       ? "Confirmando..."
-                      : "✅ Confirmar e adicionar ao Google Calendar"}
+                      : "✅ Confirmar evento e criar plano de pagamento"}
                   </Button>
                 </>
               )}

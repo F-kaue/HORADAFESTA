@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { fetchPaymentBundle } from "@/lib/payment-server";
-import { buildPaymentRecords, roundMoney } from "@/lib/payments";
+import {
+  createPaymentPlanForLead,
+  fetchPaymentBundle,
+} from "@/lib/payment-server";
+import { roundMoney } from "@/lib/payments";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -50,7 +53,6 @@ export async function POST(request: NextRequest) {
     payment_type,
     down_payment_paid,
     down_payment_paid_date,
-    down_payment_due_date,
     first_installment_due_date,
   } = parsed.data;
 
@@ -70,77 +72,24 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const remaining = roundMoney(total_value - entrada);
-  const parcelCount = payment_type === "avista" ? 1 : installments;
-  const installmentValue =
-    remaining > 0 ? roundMoney(remaining / parcelCount) : 0;
-
-  const { data: payment, error } = await supabase
-    .from("payments")
-    .insert({
-      user_id: user.id,
-      lead_id,
-      total_value,
-      down_payment: entrada,
-      installments: parcelCount,
-      installment_value: installmentValue,
-      payment_type,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      const bundle = await fetchPaymentBundle(supabase, lead_id);
-      if (bundle) return NextResponse.json(bundle);
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const recordDrafts = buildPaymentRecords({
-    paymentId: payment.id,
+  const result = await createPaymentPlanForLead(supabase, {
+    leadId: lead_id,
+    userId: user.id,
     totalValue: total_value,
     downPayment: entrada,
     installments,
     paymentType: payment_type,
-    downPaymentPaid: false,
+    downPaymentPaid: down_payment_paid,
     downPaymentPaidDate: down_payment_paid_date,
-    downPaymentDueDate: down_payment_due_date,
     firstInstallmentDueDate: first_installment_due_date,
   });
 
-  const { data: insertedRecords, error: recordsError } = await supabase
-    .from("payment_records")
-    .insert(recordDrafts)
-    .select();
-
-  if (recordsError) {
-    await supabase.from("payments").delete().eq("id", payment.id);
-    return NextResponse.json({ error: recordsError.message }, { status: 500 });
-  }
-
-  if (down_payment_paid && entrada > 0) {
-    const entradaRecord = insertedRecords?.find((r) => r.record_kind === "entrada");
-    if (entradaRecord) {
-      await supabase.from("payment_transactions").insert({
-        payment_id: payment.id,
-        amount: entrada,
-        paid_date: down_payment_paid_date || new Date().toISOString().slice(0, 10),
-        notes: "Entrada",
-        allocations: [{ record_id: entradaRecord.id, amount: entrada }],
-      });
-      await supabase
-        .from("payment_records")
-        .update({
-          is_paid: true,
-          paid_date: down_payment_paid_date || new Date().toISOString().slice(0, 10),
-        })
-        .eq("id", entradaRecord.id);
-    }
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
   await supabase.from("leads").update({ total_value }).eq("id", lead_id);
 
   const bundle = await fetchPaymentBundle(supabase, lead_id);
-  return NextResponse.json(bundle ?? { payment, records: insertedRecords });
+  return NextResponse.json(bundle ?? { payment: null });
 }

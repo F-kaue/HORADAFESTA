@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createPaymentPlanForLead } from "@/lib/payment-server";
 import { createGoogleCalendarEvent } from "@/lib/google-calendar";
+import { roundMoney } from "@/lib/payments";
 import { z } from "zod";
 
 const schema = z.object({
@@ -9,6 +11,12 @@ const schema = z.object({
   event_end_time: z.string().optional(),
   total_value: z.number().positive(),
   internal_notes: z.string().optional(),
+  down_payment: z.number().min(0).default(0),
+  installments: z.number().int().min(1).max(24).default(1),
+  payment_type: z.enum(["avista", "parcelado"]).default("parcelado"),
+  down_payment_paid: z.boolean().default(false),
+  down_payment_paid_date: z.string().optional(),
+  first_installment_due_date: z.string().optional(),
 });
 
 export async function POST(
@@ -25,6 +33,14 @@ export async function POST(
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+  }
+
+  const entrada = roundMoney(parsed.data.down_payment);
+  if (entrada > parsed.data.total_value) {
+    return NextResponse.json(
+      { error: "A entrada não pode ser maior que o valor total" },
+      { status: 400 }
+    );
   }
 
   const { data: lead } = await supabase
@@ -53,6 +69,7 @@ export async function POST(
       `Tipo: ${lead.event_type}`,
       lead.observations ? `Obs: ${lead.observations}` : "",
       parsed.data.internal_notes ? `Notas: ${parsed.data.internal_notes}` : "",
+      entrada > 0 ? `Entrada: R$ ${entrada.toFixed(2)}` : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -110,9 +127,31 @@ export async function POST(
     }
   }
 
+  const planResult = await createPaymentPlanForLead(supabase, {
+    leadId: id,
+    userId: user.id,
+    totalValue: parsed.data.total_value,
+    downPayment: entrada,
+    installments: parsed.data.installments,
+    paymentType: parsed.data.payment_type,
+    downPaymentPaid: parsed.data.down_payment_paid,
+    downPaymentPaidDate: parsed.data.down_payment_paid_date,
+    firstInstallmentDueDate: parsed.data.first_installment_due_date,
+  });
+
+  if (!planResult.ok) {
+    return NextResponse.json(
+      { error: `Evento confirmado, mas plano financeiro falhou: ${planResult.error}` },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     lead: updated,
     googleEventId,
-    message: "Evento confirmado e adicionado à agenda! 🎉",
+    message:
+      entrada > 0
+        ? "Evento confirmado com entrada e plano de pagamento criados! 🎉"
+        : "Evento confirmado e plano de pagamento criados! 🎉",
   });
 }

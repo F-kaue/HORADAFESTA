@@ -1,4 +1,5 @@
 import {
+  buildPaymentRecords,
   getPaidPerRecord,
   getTotalReceived,
   roundMoney,
@@ -88,4 +89,95 @@ export async function fetchPaymentBundle(
       remaining: roundMoney(total - received),
     },
   };
+}
+
+export type CreatePaymentPlanInput = {
+  leadId: string;
+  userId: string;
+  totalValue: number;
+  downPayment: number;
+  installments: number;
+  paymentType: "avista" | "parcelado";
+  downPaymentPaid: boolean;
+  downPaymentPaidDate?: string;
+  firstInstallmentDueDate?: string;
+};
+
+export async function createPaymentPlanForLead(
+  supabase: SupabaseClient,
+  input: CreatePaymentPlanInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const existing = await fetchPaymentBundle(supabase, input.leadId);
+  if (existing) return { ok: true };
+
+  const entrada = roundMoney(input.downPayment);
+  if (entrada > input.totalValue) {
+    return { ok: false, error: "A entrada não pode ser maior que o valor total" };
+  }
+
+  const remaining = roundMoney(input.totalValue - entrada);
+  const parcelCount = input.paymentType === "avista" ? 1 : input.installments;
+  const installmentValue =
+    remaining > 0 ? roundMoney(remaining / parcelCount) : 0;
+
+  const { data: payment, error } = await supabase
+    .from("payments")
+    .insert({
+      user_id: input.userId,
+      lead_id: input.leadId,
+      total_value: input.totalValue,
+      down_payment: entrada,
+      installments: parcelCount,
+      installment_value: installmentValue,
+      payment_type: input.paymentType,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return { ok: true };
+    return { ok: false, error: error.message };
+  }
+
+  const recordDrafts = buildPaymentRecords({
+    paymentId: payment.id,
+    totalValue: input.totalValue,
+    downPayment: entrada,
+    installments: input.installments,
+    paymentType: input.paymentType,
+    downPaymentPaid: false,
+    downPaymentPaidDate: input.downPaymentPaidDate,
+    firstInstallmentDueDate: input.firstInstallmentDueDate,
+  });
+
+  const { data: insertedRecords, error: recordsError } = await supabase
+    .from("payment_records")
+    .insert(recordDrafts)
+    .select();
+
+  if (recordsError) {
+    await supabase.from("payments").delete().eq("id", payment.id);
+    return { ok: false, error: recordsError.message };
+  }
+
+  if (input.downPaymentPaid && entrada > 0) {
+    const entradaRecord = insertedRecords?.find((r) => r.record_kind === "entrada");
+    if (entradaRecord) {
+      const paidDate =
+        input.downPaymentPaidDate || new Date().toISOString().slice(0, 10);
+      await supabase.from("payment_transactions").insert({
+        payment_id: payment.id,
+        amount: entrada,
+        paid_date: paidDate,
+        notes: "Entrada",
+        allocations: [{ record_id: entradaRecord.id, amount: entrada }],
+      });
+      await supabase
+        .from("payment_records")
+        .update({ is_paid: true, paid_date: paidDate })
+        .eq("id", entradaRecord.id);
+    }
+  }
+
+  return { ok: true };
 }
