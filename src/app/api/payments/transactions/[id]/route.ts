@@ -5,6 +5,7 @@ import {
   type PaymentRecordRow,
   type PaymentTransactionRow,
 } from "@/lib/payments";
+import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 
 export async function DELETE(
   _request: NextRequest,
@@ -48,6 +49,21 @@ export async function DELETE(
       .from("payment_records")
       .update({ is_paid: u.is_paid, paid_date: u.paid_date })
       .eq("id", u.id);
+  }
+
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("lead_id")
+    .eq("id", tx.payment_id)
+    .single();
+
+  const leadId = payment?.lead_id;
+  if (leadId) {
+    try {
+      await syncLeadGoogleCalendarPayment(supabase, leadId);
+    } catch {
+      // Google sync opcional
+    }
   }
 
   return NextResponse.json({ ok: true });

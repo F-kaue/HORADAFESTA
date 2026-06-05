@@ -1,9 +1,18 @@
 "use client";
 
-import { Calendar, MapPin, Users, MessageCircle, GripVertical } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  MessageCircle,
+  GripVertical,
+  CheckCircle2,
+  CircleDollarSign,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate, timeAgo } from "@/lib/utils";
+import { formatCurrency, formatDate, timeAgo } from "@/lib/utils";
 import { formatSlotsLabel } from "@/lib/slots";
+import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { LEAD_STATUS_CONFIG, type Lead, type LeadStatus } from "@/types/database";
 import { KANBAN_CARD_ACCENT, KANBAN_COLUMN_STYLES } from "./kanban-styles";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -13,12 +22,49 @@ interface LeadCardProps {
   lead: Lead;
   onOpen: (lead: Lead) => void;
   isDragging?: boolean;
+  paymentSummary?: LeadPaymentSummary | null;
 }
 
-export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
+function PaymentBadge({ summary }: { summary: LeadPaymentSummary }) {
+  if (summary.status === "none") return null;
+
+  if (summary.status === "paid") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-2xs font-bold text-emerald-800 ring-1 ring-emerald-200">
+        <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden />
+        Quitado
+      </span>
+    );
+  }
+
+  if (summary.status === "partial") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-bold text-amber-900 ring-1 ring-amber-200">
+        <CircleDollarSign className="h-3 w-3 shrink-0" aria-hidden />
+        Falta {formatCurrency(summary.remaining)}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-2xs font-bold text-orange-900 ring-1 ring-orange-200">
+      <CircleDollarSign className="h-3 w-3 shrink-0" aria-hidden />
+      A receber
+    </span>
+  );
+}
+
+export function LeadCard({
+  lead,
+  onOpen,
+  isDragging,
+  paymentSummary,
+}: LeadCardProps) {
   const statusKey = lead.status in LEAD_STATUS_CONFIG ? lead.status : "novo";
   const status = LEAD_STATUS_CONFIG[statusKey as LeadStatus];
   const badgeStyle = KANBAN_COLUMN_STYLES[statusKey as LeadStatus].badge;
+  const showPayment =
+    lead.status === "confirmado" && paymentSummary && paymentSummary.status !== "none";
 
   const clientWa = buildWhatsAppUrl(
     lead.whatsapp,
@@ -30,6 +76,7 @@ export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
       className={cn(
         "group cursor-grab rounded-xl border border-border/80 bg-card shadow-card transition-all duration-200",
         KANBAN_CARD_ACCENT[statusKey as LeadStatus],
+        paymentSummary?.status === "paid" && "ring-1 ring-emerald-200/80",
         "hover:shadow-elevated hover:-translate-y-0.5",
         isDragging && "shadow-elevated ring-2 ring-primary/40",
         "active:cursor-grabbing"
@@ -44,14 +91,19 @@ export function LeadCard({ lead, onOpen, isDragging }: LeadCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="truncate text-base font-bold text-foreground">{lead.name}</p>
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-2xs font-bold",
-                badgeStyle
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-2xs font-bold",
+                  badgeStyle
+                )}
+              >
+                {status.label}
+              </span>
+              {showPayment && paymentSummary && (
+                <PaymentBadge summary={paymentSummary} />
               )}
-            >
-              {status.label}
-            </span>
+            </div>
           </div>
           {lead.event_type && (
             <p className="mt-0.5 truncate text-xs font-semibold text-muted-foreground">

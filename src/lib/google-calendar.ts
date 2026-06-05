@@ -144,6 +144,84 @@ export async function createGoogleCalendarEvent(
   return event.id ?? null;
 }
 
+export function buildCalendarEventTitle(
+  eventType: string,
+  name: string,
+  isPaid: boolean
+): string {
+  const base = `🎉 ${eventType} — ${name}`;
+  return isPaid ? `✅ QUITADO · ${base}` : base;
+}
+
+export function buildCalendarPaymentLine(
+  received: number,
+  total: number,
+  isPaid: boolean
+): string {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+  if (isPaid) {
+    return `💰 Pagamento: QUITADO (${fmt(received)} de ${fmt(total)})`;
+  }
+  const remaining = Math.max(0, total - received);
+  if (received > 0) {
+    return `💰 Pagamento: parcial — recebido ${fmt(received)}, falta ${fmt(remaining)}`;
+  }
+  return `💰 Pagamento: a receber — total ${fmt(total)}`;
+}
+
+/** Atualiza título/cor/descrição do evento conforme status de pagamento */
+export async function updateGoogleCalendarPaymentStatus(
+  tokenData: Record<string, unknown>,
+  params: {
+    eventId: string;
+    calendarId?: string;
+    eventType: string;
+    leadName: string;
+    descriptionBase: string;
+    total: number;
+    received: number;
+    isPaid: boolean;
+  }
+): Promise<boolean> {
+  const tokens = await refreshAccessToken(tokenData as GoogleTokens);
+  const calendarId = params.calendarId || "primary";
+
+  const paymentLine = buildCalendarPaymentLine(
+    params.received,
+    params.total,
+    params.isPaid
+  );
+  const description = [
+    params.descriptionBase.replace(/\n💰 Pagamento:.*$/gm, "").trim(),
+    paymentLine,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const res = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: buildCalendarEventTitle(
+          params.eventType,
+          params.leadName,
+          params.isPaid
+        ),
+        description,
+        colorId: params.isPaid ? "2" : "10",
+      }),
+    }
+  );
+
+  return res.ok;
+}
+
 export function getGoogleAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,

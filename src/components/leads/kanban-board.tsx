@@ -34,7 +34,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { KANBAN_COLUMN_STYLES } from "./kanban-styles";
+import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { LEAD_STATUS_CONFIG, EVENT_TYPES, type Lead, type LeadStatus } from "@/types/database";
+
+type PaymentFilter = "all" | "paid" | "owing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -49,9 +52,11 @@ const COLUMNS: LeadStatus[] = [
 function SortableLeadCard({
   lead,
   onOpen,
+  paymentSummary,
 }: {
   lead: Lead;
   onOpen: (l: Lead) => void;
+  paymentSummary?: LeadPaymentSummary | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: lead.id });
@@ -64,7 +69,12 @@ function SortableLeadCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <LeadCard lead={lead} onOpen={onOpen} isDragging={isDragging} />
+      <LeadCard
+        lead={lead}
+        onOpen={onOpen}
+        isDragging={isDragging}
+        paymentSummary={paymentSummary}
+      />
     </div>
   );
 }
@@ -74,11 +84,13 @@ function KanbanColumn({
   leads,
   onOpen,
   isOver,
+  paymentSummaries,
 }: {
   status: LeadStatus;
   leads: Lead[];
   onOpen: (l: Lead) => void;
   isOver?: boolean;
+  paymentSummaries: Record<string, LeadPaymentSummary>;
 }) {
   const config = LEAD_STATUS_CONFIG[status];
   const styles = KANBAN_COLUMN_STYLES[status];
@@ -130,7 +142,12 @@ function KanbanColumn({
             </div>
           ) : (
             leads.map((lead) => (
-              <SortableLeadCard key={lead.id} lead={lead} onOpen={onOpen} />
+              <SortableLeadCard
+                key={lead.id}
+                lead={lead}
+                onOpen={onOpen}
+                paymentSummary={paymentSummaries[lead.id]}
+              />
             ))
           )}
         </div>
@@ -153,6 +170,10 @@ export function KanbanBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
+  const [paymentSummaries, setPaymentSummaries] = useState<
+    Record<string, LeadPaymentSummary>
+  >({});
   const [mobileColumn, setMobileColumn] = useState<LeadStatus>("novo");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -189,17 +210,25 @@ export function KanbanBoard() {
   const loadLeads = useCallback(
     async (opts?: { silent?: boolean }) => {
       if (!opts?.silent) setRefreshing(true);
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .order("arrived_at", { ascending: false });
+      const [leadsRes, payRes] = await Promise.all([
+        supabase.from("leads").select("*").order("arrived_at", { ascending: false }),
+        fetch("/api/payments/summary", { cache: "no-store" }),
+      ]);
 
-      if (error) {
+      if (leadsRes.error) {
         toast.error("Erro ao carregar leads");
-      } else if (data) {
-        setLeads(data as Lead[]);
+      } else if (leadsRes.data) {
+        setLeads(leadsRes.data as Lead[]);
         setLastSync(new Date());
       }
+
+      if (payRes.ok) {
+        const payData = await payRes.json();
+        setPaymentSummaries(payData.by_lead ?? {});
+      }
+
+      fetch("/api/payments/sync-calendar", { method: "POST" }).catch(() => {});
+
       setRefreshing(false);
     },
     [supabase]
@@ -234,6 +263,16 @@ export function KanbanBoard() {
   const filtered = leads.filter((l) => {
     if (search && !l.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (eventTypeFilter !== "all" && l.event_type !== eventTypeFilter) return false;
+
+    const pay = paymentSummaries[l.id];
+    if (paymentFilter === "paid") {
+      if (pay?.status !== "paid") return false;
+    }
+    if (paymentFilter === "owing") {
+      if (l.status !== "confirmado") return false;
+      if (!pay || pay.status === "paid" || pay.status === "none") return false;
+    }
+
     return true;
   });
 
@@ -312,7 +351,7 @@ export function KanbanBoard() {
           />
         </div>
         <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-          <SelectTrigger className="w-full border-2 font-medium sm:w-[220px]">
+          <SelectTrigger className="w-full border-2 font-medium sm:w-[200px]">
             <SelectValue placeholder="Tipo de evento" />
           </SelectTrigger>
           <SelectContent>
@@ -322,6 +361,19 @@ export function KanbanBoard() {
                 {t}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={paymentFilter}
+          onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}
+        >
+          <SelectTrigger className="w-full border-2 font-medium sm:w-[200px]">
+            <SelectValue placeholder="Pagamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos pagamentos</SelectItem>
+            <SelectItem value="paid">✅ Quitados</SelectItem>
+            <SelectItem value="owing">⏳ Falta receber</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
@@ -400,7 +452,12 @@ export function KanbanBoard() {
             filtered
               .filter((l) => l.status === mobileColumn)
               .map((lead) => (
-                <LeadCard key={lead.id} lead={lead} onOpen={setSelectedLead} />
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onOpen={setSelectedLead}
+                  paymentSummary={paymentSummaries[lead.id]}
+                />
               ))
           )}
         </div>
@@ -426,13 +483,19 @@ export function KanbanBoard() {
               leads={filtered.filter((l) => l.status === status)}
               onOpen={setSelectedLead}
               isOver={overColumnId === status}
+              paymentSummaries={paymentSummaries}
             />
           ))}
         </div>
         <DragOverlay dropAnimation={{ duration: 200, easing: "ease-out" }}>
           {activeLead ? (
             <div className="rotate-2 scale-[1.02] cursor-grabbing">
-              <LeadCard lead={activeLead} onOpen={() => {}} isDragging />
+              <LeadCard
+                lead={activeLead}
+                onOpen={() => {}}
+                isDragging
+                paymentSummary={paymentSummaries[activeLead.id]}
+              />
             </div>
           ) : null}
         </DragOverlay>

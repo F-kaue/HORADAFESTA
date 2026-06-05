@@ -6,6 +6,10 @@ import {
   type PaymentRecordRow,
   type PaymentTransactionRow,
 } from "@/lib/payments";
+import {
+  buildPaymentSummary,
+  type LeadPaymentSummary,
+} from "@/lib/payment-status";
 import type { Payment, PaymentRecordWithProgress, PaymentTransaction } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -180,4 +184,46 @@ export async function createPaymentPlanForLead(
   }
 
   return { ok: true };
+}
+
+/** Resumo financeiro por lead (plano mais recente) — para kanban e filtros */
+export async function fetchAllPaymentSummaries(
+  supabase: SupabaseClient
+): Promise<Record<string, LeadPaymentSummary>> {
+  const { data: paymentRows } = await supabase
+    .from("payments")
+    .select("id, lead_id, total_value, created_at")
+    .order("created_at", { ascending: false });
+
+  const latestByLead = new Map<string, { id: string; total_value: number }>();
+  for (const row of paymentRows ?? []) {
+    if (!latestByLead.has(row.lead_id)) {
+      latestByLead.set(row.lead_id, {
+        id: row.id,
+        total_value: Number(row.total_value),
+      });
+    }
+  }
+
+  if (latestByLead.size === 0) return {};
+
+  const paymentIds = Array.from(latestByLead.values()).map((p) => p.id);
+  const { data: txRows } = await supabase
+    .from("payment_transactions")
+    .select("payment_id, amount")
+    .in("payment_id", paymentIds);
+
+  const receivedByPayment = new Map<string, number>();
+  for (const tx of txRows ?? []) {
+    const prev = receivedByPayment.get(tx.payment_id) ?? 0;
+    receivedByPayment.set(tx.payment_id, prev + Number(tx.amount));
+  }
+
+  const result: Record<string, LeadPaymentSummary> = {};
+  for (const [leadId, payment] of Array.from(latestByLead.entries())) {
+    const received = receivedByPayment.get(payment.id) ?? 0;
+    result[leadId] = buildPaymentSummary(payment.total_value, received);
+  }
+
+  return result;
 }

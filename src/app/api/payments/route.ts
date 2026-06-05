@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import {
   createPaymentPlanForLead,
   fetchPaymentBundle,
@@ -89,6 +90,12 @@ export async function POST(request: NextRequest) {
   }
 
   await supabase.from("leads").update({ total_value }).eq("id", lead_id);
+
+  try {
+    await syncLeadGoogleCalendarPayment(supabase, lead_id);
+  } catch {
+    // Google sync opcional
+  }
 
   const bundle = await fetchPaymentBundle(supabase, lead_id);
   return NextResponse.json(bundle ?? { payment: null });

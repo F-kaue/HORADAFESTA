@@ -9,6 +9,7 @@ import {
   type PaymentRecordRow,
   type PaymentTransactionRow,
 } from "@/lib/payments";
+import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   const { data: payment } = await supabase
     .from("payments")
-    .select("*, leads(id)")
+    .select("id, total_value, lead_id")
     .eq("id", payment_id)
     .single();
 
@@ -125,6 +126,15 @@ export async function POST(request: NextRequest) {
   await syncRecords(supabase, payment_id);
 
   const newReceived = roundMoney(received + amount);
+
+  if (payment.lead_id) {
+    try {
+      await syncLeadGoogleCalendarPayment(supabase, payment.lead_id);
+    } catch {
+      // Google sync opcional
+    }
+  }
+
   return NextResponse.json({
     transaction,
     summary: {

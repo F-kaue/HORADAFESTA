@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import { createPaymentPlanForLead } from "@/lib/payment-server";
 import { createGoogleCalendarEvent } from "@/lib/google-calendar";
 import { roundMoney } from "@/lib/payments";
@@ -195,6 +196,12 @@ export async function POST(
       { error: `Evento confirmado, mas plano financeiro falhou: ${planResult.error}` },
       { status: 500 }
     );
+  }
+
+  try {
+    await syncLeadGoogleCalendarPayment(supabase, id);
+  } catch {
+    // Google sync opcional
   }
 
   return NextResponse.json({
