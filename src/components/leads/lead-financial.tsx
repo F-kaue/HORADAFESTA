@@ -70,20 +70,34 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
   const [receiptTarget, setReceiptTarget] = useState<string>("auto");
   const [savingReceipt, setSavingReceipt] = useState(false);
 
-  const load = async () => {
-    const res = await fetch(`/api/payments?lead_id=${lead.id}`);
-    const data = await res.json();
-    if (data.payment) {
+  const applyBundle = (data: {
+    payment?: Payment | null;
+    records?: PaymentRecordWithProgress[];
+    transactions?: PaymentTransaction[];
+    summary?: Summary | null;
+  }) => {
+    if (data.payment && data.summary) {
       setPayment(data.payment);
       setRecords(data.records ?? []);
       setTransactions(data.transactions ?? []);
-      setSummary(data.summary ?? { total: 0, received: 0, remaining: 0 });
+      setSummary(data.summary);
+      setShowReceiptForm(false);
     } else {
       setPayment(null);
       setRecords([]);
       setTransactions([]);
       setSummary({ total: 0, received: 0, remaining: 0 });
     }
+  };
+
+  const load = async () => {
+    const res = await fetch(`/api/payments?lead_id=${lead.id}`, { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Erro ao carregar financeiro");
+      return;
+    }
+    applyBundle(data);
   };
 
   useEffect(() => {
@@ -152,12 +166,16 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
     setCreating(false);
 
     const data = await res.json();
-    if (!res.ok) {
+    if (!res.ok && !data.payment) {
       toast.error(data.error || "Erro ao criar plano");
       return;
     }
-    toast.success("Plano criado! Agora registre cada recebimento no extrato.");
-    load();
+    applyBundle(data);
+    if (data.already_exists) {
+      toast.message("Plano já existia — abrindo controle de pagamentos");
+    } else {
+      toast.success("Plano criado! Registre cada recebimento abaixo.");
+    }
     onUpdate();
   };
 
@@ -193,13 +211,13 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
       return;
     }
 
+    await load();
     toast.success(
-      `Recebido ${formatCurrency(amount)} · Falta ${formatCurrency(data.summary.remaining)}`
+      `Recebido ${formatCurrency(amount)} · Falta ${formatCurrency(data.summary?.remaining ?? 0)}`
     );
     setReceiptAmount("");
     setReceiptNotes("");
     setShowReceiptForm(false);
-    load();
     onUpdate();
   };
 

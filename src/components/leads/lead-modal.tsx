@@ -211,7 +211,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
             </TabsContent>
 
             <TabsContent value="finance">
-              <LeadFinancial lead={lead} onUpdate={onUpdate} />
+              <LeadFinancial key={lead.id} lead={lead} onUpdate={onUpdate} />
             </TabsContent>
           </Tabs>
         </div>
