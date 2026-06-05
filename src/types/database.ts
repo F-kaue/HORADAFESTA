@@ -103,6 +103,26 @@ export interface StatusHistory {
   created_at: string;
 }
 
+export interface PaymentAllocation {
+  record_id: string;
+  amount: number;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  payment_id: string;
+  amount: number;
+  paid_date: string;
+  notes: string | null;
+  allocations: PaymentAllocation[];
+  created_at: string;
+}
+
+export interface PaymentRecordWithProgress extends PaymentRecord {
+  paid_amount?: number;
+  remaining_amount?: number;
+}
+
 export const LEAD_STATUS_CONFIG: Record<
   LeadStatus,
   { label: string; color: string; emoji: string }

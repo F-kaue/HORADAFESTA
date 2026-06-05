@@ -48,26 +48,31 @@ export default function FinanceiroPage() {
         Object.entries(typeCount).map(([name, value]) => ({ name, value }))
       );
 
-      const { data: records } = await supabase
-        .from("payment_records")
-        .select("value, is_paid, paid_date, due_date");
+      const { data: allPayments } = await supabase
+        .from("payments")
+        .select("id, total_value");
+
+      const { data: txs } = await supabase
+        .from("payment_transactions")
+        .select("amount, paid_date");
 
       let rec = 0;
-      let pen = 0;
       const monthly: Record<string, number> = {};
 
-      (records ?? []).forEach((r) => {
-        const v = Number(r.value);
-        if (r.is_paid) {
-          rec += v;
-          if (r.paid_date) {
-            const m = r.paid_date.slice(0, 7);
-            monthly[m] = (monthly[m] || 0) + v;
-          }
-        } else {
-          pen += v;
+      (txs ?? []).forEach((t) => {
+        const v = Number(t.amount);
+        rec += v;
+        if (t.paid_date) {
+          const m = t.paid_date.slice(0, 7);
+          monthly[m] = (monthly[m] || 0) + v;
         }
       });
+
+      const contractTotal = (allPayments ?? []).reduce(
+        (s, p) => s + Number(p.total_value),
+        0
+      );
+      const pen = Math.max(0, contractTotal - rec);
 
       setReceived(rec);
       setPending(pen);
