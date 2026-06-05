@@ -64,6 +64,7 @@ export interface Payment {
   id: string;
   lead_id: string;
   total_value: number;
+  down_payment: number;
   installments: number;
   installment_value: number | null;
   payment_type: "avista" | "parcelado";
@@ -75,6 +76,7 @@ export interface PaymentRecord {
   id: string;
   payment_id: string;
   installment_number: number;
+  record_kind: "entrada" | "parcela";
   due_date: string | null;
   paid_date: string | null;
   value: number;
