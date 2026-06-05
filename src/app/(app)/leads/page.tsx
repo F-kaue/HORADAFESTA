@@ -6,7 +6,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kanban de Leads"
-        description="Arraste os cards entre as colunas para mover no funil de vendas"
+        description="Arraste os cards entre as colunas. A lista atualiza em tempo real ou use Atualizar."
       />
       <KanbanBoard />
     </div>

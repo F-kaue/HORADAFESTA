@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +20,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Search, Inbox } from "lucide-react";
+import { Search, Inbox, RefreshCw, Radio } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { LeadCard } from "./lead-card";
 import { LeadModal } from "./lead-modal";
@@ -119,11 +120,11 @@ function KanbanColumn({
                 highlighted ? "opacity-100" : "opacity-70"
               )}
             >
-              <Inbox className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-              <p className="text-sm font-semibold text-foreground/80">
+              <Inbox className="h-8 w-8 text-foreground/40" strokeWidth={1.5} />
+              <p className="text-sm font-bold text-foreground">
                 {highlighted ? "Solte o card aqui" : "Nenhum lead"}
               </p>
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-semibold text-foreground/70">
                 Arraste cards para esta coluna
               </p>
             </div>
@@ -138,8 +139,17 @@ function KanbanColumn({
   );
 }
 
+function formatLastSync(date: Date) {
+  const sec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (sec < 10) return "agora";
+  if (sec < 60) return `há ${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `há ${min}min`;
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
 export function KanbanBoard() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
@@ -147,31 +157,79 @@ export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumnId, setOverColumnId] = useState<LeadStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [realtimeOn, setRealtimeOn] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
-  const loadLeads = useCallback(async () => {
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .order("arrived_at", { ascending: false });
-    if (data) setLeads(data as Lead[]);
-  }, [supabase]);
+  const applyLeadChange = useCallback((payload: {
+    eventType: string;
+    new: Lead | Record<string, unknown>;
+    old: Lead | Record<string, unknown>;
+  }) => {
+      if (payload.eventType === "DELETE") {
+        const id = (payload.old as Lead)?.id;
+        if (id) setLeads((prev) => prev.filter((l) => l.id !== id));
+        return;
+      }
+      const row = payload.new as Lead;
+      if (!row?.id) return;
+      setLeads((prev) => {
+        const idx = prev.findIndex((l) => l.id === row.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = row;
+          return next;
+        }
+        return [row, ...prev];
+      });
+    },
+    []
+  );
+
+  const loadLeads = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setRefreshing(true);
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .order("arrived_at", { ascending: false });
+
+      if (error) {
+        toast.error("Erro ao carregar leads");
+      } else if (data) {
+        setLeads(data as Lead[]);
+        setLastSync(new Date());
+      }
+      setRefreshing(false);
+    },
+    [supabase]
+  );
 
   useEffect(() => {
-    loadLeads();
+    loadLeads({ silent: true });
 
     const channel = supabase
-      .channel("leads-changes")
+      .channel("leads-kanban-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "leads" },
-        () => loadLeads()
+        (payload) => {
+          applyLeadChange(payload);
+          setLastSync(new Date());
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeOn(status === "SUBSCRIBED");
+      });
+
+    const onFocus = () => loadLeads({ silent: true });
+    window.addEventListener("focus", onFocus);
 
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [supabase, loadLeads]);
+  }, [supabase, loadLeads, applyLeadChange]);
 
   const filtered = leads.filter((l) => {
     if (search && !l.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -231,7 +289,7 @@ export function KanbanBoard() {
 
     if (!res.ok) {
       toast.error("Erro ao atualizar status");
-      loadLeads();
+      loadLeads({ silent: true });
     } else {
       toast.success(
         `Movido para ${LEAD_STATUS_CONFIG[newStatus].label}`
@@ -266,9 +324,34 @@ export function KanbanBoard() {
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs font-semibold text-muted-foreground sm:ml-auto">
-          {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {realtimeOn && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-2xs font-bold text-emerald-800">
+              <Radio className="h-3 w-3" aria-hidden />
+              Ao vivo
+            </span>
+          )}
+          {lastSync && (
+            <span className="text-2xs font-semibold text-muted-foreground sm:text-xs">
+              {formatLastSync(lastSync)}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2 border-2 font-semibold"
+            disabled={refreshing}
+            onClick={() => loadLeads()}
+            aria-label="Atualizar leads"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            Atualizar
+          </Button>
+          <span className="text-xs font-bold text-foreground">
+            {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {/* Mobile */}
