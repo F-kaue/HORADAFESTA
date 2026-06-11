@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wallet, Settings, CalendarDays } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Wallet,
+  Settings,
+  MessageCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
-  { href: "/eventos", label: "Eventos", icon: CalendarDays },
+  { href: "/conversas", label: "Chat", icon: MessageCircle },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/configuracoes", label: "Config", icon: Settings },
 ];

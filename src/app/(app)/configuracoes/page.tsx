@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Profile } from "@/types/database";
+import { WhatsAppConnectCard } from "@/components/whatsapp/whatsapp-connect-card";
 import { toast } from "sonner";
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -283,6 +284,8 @@ function ConfiguracoesContent() {
           </div>
         </CardContent>
       </Card>
+
+      <WhatsAppConnectCard />
 
       <Card>
         <CardHeader>
