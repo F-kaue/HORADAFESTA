@@ -314,7 +314,7 @@ export default function OrcamentoPage() {
           <section className="form-section">
             <p className="form-section-title mb-4">Detalhes do evento</p>
             <div className="space-y-5">
-              <GuestCountField value={guestCount} onChange={setGuestCount} />
+              <GuestCountField value={guestCount} onChange={setGuestCount} min={30} />
 
               <FormField label="Observações" hint="Opcional — tema, restrições, preferências">
                 <Textarea
