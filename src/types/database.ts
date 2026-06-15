@@ -53,6 +53,7 @@ export interface Lead {
   google_event_id: string | null;
   archived_at: string | null;
   finalized_at: string | null;
+  revenue_recognized_at: string | null;
   created_at: string;
 }
 

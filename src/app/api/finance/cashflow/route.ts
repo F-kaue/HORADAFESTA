@@ -31,7 +31,7 @@ export async function GET() {
 
   const { data: leads } = await supabase
     .from("leads")
-    .select("id, name, event_date, event_type, status, total_value")
+    .select("id, name, event_date, event_type, status, total_value, revenue_recognized_at")
     .in("status", ["confirmado", "finalizado"]);
 
   const leadIds = (leads ?? []).map((l) => l.id);
@@ -67,6 +67,7 @@ export async function GET() {
       status: lead.status,
       contractTotal,
       received,
+      revenueRecognizedAt: lead.revenue_recognized_at,
     });
   });
 

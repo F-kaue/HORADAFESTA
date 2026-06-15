@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const { data: leads } = await supabase
     .from("leads")
-    .select("id, name, event_date, event_type, status, total_value")
+    .select("id, name, event_date, event_type, status, total_value, revenue_recognized_at")
     .in("status", ["confirmado", "finalizado"])
     .order("event_date", { ascending: true });
 
@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
       status: lead.status,
       contractTotal,
       received,
+      revenueRecognizedAt: lead.revenue_recognized_at,
     });
   });
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Info } from "lucide-react";
+import { CheckCircle2, Info, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,6 +24,7 @@ import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ContasAReceberPage() {
   const branding = useReportBranding();
@@ -32,6 +34,7 @@ export default function ContasAReceberPage() {
   const [to, setTo] = useState("");
   const [bucket, setBucket] = useState<ReceivableBucket | "all">("all");
   const [eventType, setEventType] = useState("all");
+  const [releasingId, setReleasingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +54,56 @@ export default function ContasAReceberPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const releaseRevenue = async (leadId: string, clientName: string) => {
+    if (
+      !confirm(
+        `Confirmar que o saldo recebido de ${clientName} já pode contar como receita disponível?`
+      )
+    ) {
+      return;
+    }
+    setReleasingId(leadId);
+    try {
+      const res = await fetch(`/api/finance/receivables/${leadId}/release`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error || "Erro ao liberar saldo");
+        return;
+      }
+      toast.success("Saldo confirmado como disponível");
+      load();
+    } finally {
+      setReleasingId(null);
+    }
+  };
+
+  const holdRevenue = async (leadId: string, clientName: string) => {
+    if (
+      !confirm(
+        `Voltar o saldo de ${clientName} para recebido retido? (só liberações manuais)`
+      )
+    ) {
+      return;
+    }
+    setReleasingId(leadId);
+    try {
+      const res = await fetch(`/api/finance/receivables/${leadId}/release`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error || "Erro ao atualizar");
+        return;
+      }
+      toast.success("Saldo voltou para retido");
+      load();
+    } finally {
+      setReleasingId(null);
+    }
+  };
 
   const eventTypes = useMemo(() => {
     const set = new Set((data?.rows ?? []).map((r) => r.eventType).filter(Boolean));
@@ -149,12 +202,13 @@ export default function ContasAReceberPage() {
           <div className="space-y-1 text-muted-foreground">
             <p>
               <strong className="text-foreground">Recebido retido:</strong> valor
-              que já entrou, mas o evento ainda não está na semana do evento — não
-              conte como saldo livre.
+              que já entrou, mas o evento ainda não está na semana do evento. Use
+              &quot;Confirmar saldo&quot; quando decidir que já pode usar esse valor.
             </p>
             <p>
               <strong className="text-foreground">Receita disponível:</strong>{" "}
-              liberada na semana do evento ou após a realização.
+              liberada automaticamente na semana do evento ou quando você confirma
+              manualmente.
             </p>
           </div>
         </CardContent>
@@ -248,7 +302,8 @@ export default function ContasAReceberPage() {
                   <th className="py-3 pr-3">A receber</th>
                   <th className="py-3 pr-3">Retido</th>
                   <th className="py-3 pr-3">Disponível</th>
-                  <th className="py-3">Situação</th>
+                  <th className="py-3 pr-3">Situação</th>
+                  <th className="py-3">Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,21 +324,59 @@ export default function ContasAReceberPage() {
                     <td className="py-3 pr-3 text-emerald-700">
                       {formatCurrency(r.available)}
                     </td>
-                    <td className="py-3">
-                      <span
-                        className={cn(
-                          "rounded-full border px-2 py-0.5 text-2xs font-bold",
-                          RECEIVABLE_BUCKET_LABELS[r.bucket].color
+                    <td className="py-3 pr-3">
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={cn(
+                            "inline-flex w-fit rounded-full border px-2 py-0.5 text-2xs font-bold",
+                            RECEIVABLE_BUCKET_LABELS[r.bucket].color
+                          )}
+                        >
+                          {RECEIVABLE_BUCKET_LABELS[r.bucket].label}
+                        </span>
+                        {r.manuallyReleased && r.revenueRecognizedAt && (
+                          <span className="text-2xs text-muted-foreground">
+                            Confirmado em{" "}
+                            {new Date(r.revenueRecognizedAt).toLocaleDateString(
+                              "pt-BR"
+                            )}
+                          </span>
                         )}
-                      >
-                        {RECEIVABLE_BUCKET_LABELS[r.bucket].label}
-                      </span>
+                      </div>
+                    </td>
+                    <td className="py-3">
+                      {r.held > 0 && r.received > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 whitespace-nowrap text-xs"
+                          disabled={releasingId === r.leadId}
+                          onClick={() => releaseRevenue(r.leadId, r.clientName)}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Confirmar saldo
+                        </Button>
+                      )}
+                      {r.manuallyReleased && r.received > 0 && r.held === 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 whitespace-nowrap text-xs text-muted-foreground"
+                          disabled={releasingId === r.leadId}
+                          onClick={() => holdRevenue(r.leadId, r.clientName)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Voltar a retido
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {!data?.rows.length && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="py-8 text-center text-muted-foreground">
                       Nenhum recebível encontrado com os filtros atuais.
                     </td>
                   </tr>
