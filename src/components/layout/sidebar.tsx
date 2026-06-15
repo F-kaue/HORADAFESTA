@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wallet, Settings, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, Settings, CalendarDays, FileText } from "lucide-react";
 import { BrandLogo } from "@/components/brand/logo";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/eventos", label: "Eventos", icon: CalendarDays },
+  { href: "/contratos", label: "Contratos", icon: FileText },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];

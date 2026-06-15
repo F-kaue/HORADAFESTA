@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wallet, Settings, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, Settings, CalendarDays, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/eventos", label: "Eventos", icon: CalendarDays },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/contratos", label: "Contratos", icon: FileText },
+  { href: "/financeiro", label: "Financ.", icon: Wallet },
   { href: "/configuracoes", label: "Config", icon: Settings },
 ];
 
@@ -18,7 +19,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 bg-card/95 backdrop-blur-md lg:hidden safe-area-pb">
-      <div className="grid grid-cols-5 gap-0.5 px-1 py-1.5">
+      <div className="grid grid-cols-6 gap-0.5 px-1 py-1.5">
         {navItems.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
