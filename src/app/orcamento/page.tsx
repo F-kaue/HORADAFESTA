@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+import { GuestCountField } from "@/components/orcamento/guest-count-field";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
 import { buildOrcamentoMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -314,23 +314,7 @@ export default function OrcamentoPage() {
           <section className="form-section">
             <p className="form-section-title mb-4">Detalhes do evento</p>
             <div className="space-y-5">
-              <div className="space-y-3">
-                <Label>Convidados estimados</Label>
-                <p className="font-display text-2xl font-bold text-primary">
-                  ~{guestCount} pessoas
-                </p>
-                <Slider
-                  min={50}
-                  max={500}
-                  step={10}
-                  value={[guestCount]}
-                  onValueChange={([v]) => setGuestCount(v)}
-                />
-                <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-                  <span>50</span>
-                  <span>500+</span>
-                </div>
-              </div>
+              <GuestCountField value={guestCount} onChange={setGuestCount} />
 
               <FormField label="Observações" hint="Opcional — tema, restrições, preferências">
                 <Textarea

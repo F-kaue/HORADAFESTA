@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+import { GuestCountField } from "@/components/orcamento/guest-count-field";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
 import { addHoursToTime } from "@/lib/event-time";
@@ -211,16 +211,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Convidados: ~{guestCount}</Label>
-            <Slider
-              value={[guestCount]}
-              onValueChange={([v]) => setGuestCount(v)}
-              min={50}
-              max={500}
-              step={10}
-            />
-          </div>
+          <GuestCountField value={guestCount} onChange={setGuestCount} />
           <div className="space-y-2">
             <Label>Observações</Label>
             <Textarea
