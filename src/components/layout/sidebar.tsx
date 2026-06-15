@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Wallet, Settings, CalendarDays } from "lucide-react";
 import { BrandLogo } from "@/components/brand/logo";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -16,11 +18,26 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [businessName, setBusinessName] = useState<string>();
+  const [cnpj, setCnpj] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("profiles")
+      .select("business_name, cnpj")
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        setBusinessName(data.business_name ?? undefined);
+        setCnpj(data.cnpj ?? null);
+      });
+  }, []);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/80 bg-card lg:flex">
-      <div className="flex h-[4.25rem] items-center border-b border-border/80 px-5">
-        <BrandLogo size="sm" />
+      <div className="flex min-h-[4.25rem] items-center border-b border-border/80 px-5 py-3">
+        <BrandLogo size="sm" businessName={businessName} cnpj={cnpj} />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {

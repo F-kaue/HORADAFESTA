@@ -62,14 +62,25 @@ export default function OrcamentoPage() {
   const [observations, setObservations] = useState("");
 
   useEffect(() => {
-    fetch("/api/catalog", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
+    const loadCatalog = async () => {
+      try {
+        const res = await fetch("/api/catalog", {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Falha ao carregar catálogo");
+        }
         setEventTypes(data.event_types ?? []);
         setServiceTypes(data.service_types ?? []);
-      })
-      .catch(() => toast.error("Erro ao carregar opções do formulário"))
-      .finally(() => setCatalogLoading(false));
+      } catch {
+        toast.error("Erro ao carregar opções do formulário");
+      } finally {
+        setCatalogLoading(false);
+      }
+    };
+    loadCatalog();
   }, []);
 
   const selectedService = useMemo(
