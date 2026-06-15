@@ -51,7 +51,7 @@ export async function GET() {
   }
 
   const paymentByLead = new Map((payments ?? []).map((p) => [p.lead_id, p]));
-  const receivableRows = (leads ?? []).map((lead) => {
+  const leadReceivableRows = (leads ?? []).map((lead) => {
     const payment = paymentByLead.get(lead.id);
     const contractTotal = payment
       ? Number(payment.total_value)
@@ -61,6 +61,7 @@ export async function GET() {
       : 0;
     return classifyReceivableRow({
       leadId: lead.id,
+      source: "lead",
       clientName: lead.name,
       eventDate: lead.event_date,
       eventType: lead.event_type,
@@ -71,11 +72,38 @@ export async function GET() {
     });
   });
 
-  const receivables = buildReceivablesSummary(receivableRows);
+  const { data: manualRows } = await supabase
+    .from("manual_receivables")
+    .select("*")
+    .eq("active", true);
 
-  const monthReceivedIn = txs
-    .filter((t) => t.paid_date >= monthStart)
-    .reduce((s, t) => s + Number(t.amount), 0);
+  const manualReceivableRows = (manualRows ?? []).map((m) =>
+    classifyReceivableRow({
+      leadId: m.id,
+      source: "manual",
+      clientName: m.client_name,
+      eventDate: m.event_date,
+      eventType: m.event_type,
+      status: "manual",
+      contractTotal: Number(m.contract_total),
+      received: Number(m.received_total),
+      revenueRecognizedAt: m.revenue_recognized_at,
+    })
+  );
+
+  const receivables = buildReceivablesSummary([
+    ...leadReceivableRows,
+    ...manualReceivableRows,
+  ]);
+
+  const manualMonthIn = (manualRows ?? [])
+    .filter((m) => m.received_date && m.received_date >= monthStart)
+    .reduce((s, m) => s + Number(m.received_total), 0);
+
+  const monthReceivedIn =
+    txs
+      .filter((t) => t.paid_date >= monthStart)
+      .reduce((s, t) => s + Number(t.amount), 0) + manualMonthIn;
 
   const monthlyFlow: { month: string; in: number; out: number; balance: number }[] = [];
   const flowMap = new Map<string, { in: number; out: number }>();
@@ -86,6 +114,15 @@ export async function GET() {
     cur.in += Number(t.amount);
     flowMap.set(m, cur);
   });
+
+  (manualRows ?? [])
+    .filter((m) => m.received_date && Number(m.received_total) > 0)
+    .forEach((m) => {
+      const month = (m.received_date as string).slice(0, 7);
+      const cur = flowMap.get(month) ?? { in: 0, out: 0 };
+      cur.in += Number(m.received_total);
+      flowMap.set(month, cur);
+    });
 
   (payables ?? [])
     .filter((p) => p.status === "pago" && p.paid_date)

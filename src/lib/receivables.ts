@@ -3,8 +3,11 @@ export const REVENUE_RECOGNITION_DAYS_BEFORE_EVENT = 7;
 
 export type ReceivableBucket = "pending" | "held" | "available";
 
+export type ReceivableSource = "lead" | "manual";
+
 export type ReceivableLeadRow = {
   leadId: string;
+  source: ReceivableSource;
   clientName: string;
   eventDate: string | null;
   eventType: string | null;
@@ -48,6 +51,7 @@ export function isRevenueRecognized(
 
 export function classifyReceivableRow(input: {
   leadId: string;
+  source?: ReceivableSource;
   clientName: string;
   eventDate: string | null;
   eventType: string | null;
@@ -75,6 +79,7 @@ export function classifyReceivableRow(input: {
 
   return {
     leadId: input.leadId,
+    source: input.source ?? "lead",
     clientName: input.clientName,
     eventDate: input.eventDate,
     eventType: input.eventType,

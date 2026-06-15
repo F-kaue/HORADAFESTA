@@ -31,14 +31,13 @@ export async function GET(request: NextRequest) {
     .order("event_date", { ascending: true });
 
   const leadIds = (leads ?? []).map((l) => l.id);
-  if (leadIds.length === 0) {
-    return NextResponse.json(buildReceivablesSummary([]));
-  }
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("id, lead_id, total_value")
-    .in("lead_id", leadIds);
+  const { data: payments } = leadIds.length
+    ? await supabase
+        .from("payments")
+        .select("id, lead_id, total_value")
+        .in("lead_id", leadIds)
+    : { data: [] };
 
   const paymentIds = (payments ?? []).map((p) => p.id);
   const paymentByLead = new Map(
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
     receivedByPayment.set(p.id, getTotalReceived(pTxs));
   }
 
-  let rows = (leads ?? []).map((lead) => {
+  const leadRows = (leads ?? []).map((lead) => {
     const payment = paymentByLead.get(lead.id);
     const contractTotal = payment
       ? Number(payment.total_value)
@@ -71,6 +70,7 @@ export async function GET(request: NextRequest) {
 
     return classifyReceivableRow({
       leadId: lead.id,
+      source: "lead",
       clientName: lead.name,
       eventDate: lead.event_date,
       eventType: lead.event_type,
@@ -81,11 +81,39 @@ export async function GET(request: NextRequest) {
     });
   });
 
+  const { data: manualRows } = await supabase
+    .from("manual_receivables")
+    .select("*")
+    .eq("active", true)
+    .order("event_date", { ascending: true });
+
+  const manualReceivableRows = (manualRows ?? []).map((m) =>
+    classifyReceivableRow({
+      leadId: m.id,
+      source: "manual",
+      clientName: m.client_name,
+      eventDate: m.event_date,
+      eventType: m.event_type,
+      status: "manual",
+      contractTotal: Number(m.contract_total),
+      received: Number(m.received_total),
+      revenueRecognizedAt: m.revenue_recognized_at,
+    })
+  );
+
+  let rows = [...leadRows, ...manualReceivableRows];
+
   if (from) rows = rows.filter((r) => r.eventDate && r.eventDate >= from);
   if (to) rows = rows.filter((r) => r.eventDate && r.eventDate <= to);
   if (eventType) rows = rows.filter((r) => r.eventType === eventType);
   if (status) rows = rows.filter((r) => r.status === status);
   if (bucket) rows = rows.filter((r) => r.bucket === bucket);
+
+  rows.sort((a, b) => {
+    const da = a.eventDate ?? "9999-99-99";
+    const db = b.eventDate ?? "9999-99-99";
+    return da.localeCompare(db);
+  });
 
   return NextResponse.json(buildReceivablesSummary(rows));
 }

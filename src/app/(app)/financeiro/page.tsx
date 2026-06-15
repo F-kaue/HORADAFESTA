@@ -11,8 +11,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Clock,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
+import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { formatCurrency } from "@/lib/utils";
 import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
@@ -91,11 +98,11 @@ export default function FluxoDeCaixaPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div className="space-y-5 sm:space-y-6">
+      <FinancePageHeader
         title="Fluxo de caixa"
-        description="Visão consolidada de entradas, saídas e saldo disponível"
-        action={
+        description="Visão consolidada de entradas, saídas e saldo disponível — incluindo eventos do CRM e recebíveis manuais."
+        actions={
           <ReportToolbar
             disabled={!data || loading}
             onExportExcel={() =>
@@ -124,104 +131,81 @@ export default function FluxoDeCaixaPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
-              Receita disponível
-            </p>
-            <p className="mt-1 text-xl font-bold text-emerald-900 dark:text-emerald-100">
-              {formatCurrency(data?.receivables.availableTotal ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-sky-200 bg-sky-50/50 dark:bg-sky-950/20">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase text-sky-800 dark:text-sky-300">
-              Recebido retido
-            </p>
-            <p className="mt-1 text-xl font-bold text-sky-900 dark:text-sky-100">
-              {formatCurrency(data?.receivables.heldTotal ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">
-              A receber
-            </p>
-            <p className="mt-1 text-xl font-bold text-amber-900 dark:text-amber-100">
-              {formatCurrency(data?.receivables.pendingTotal ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase text-rose-800 dark:text-rose-300">
-              Despesas pendentes
-            </p>
-            <p className="mt-1 text-xl font-bold text-rose-900 dark:text-rose-100">
-              {formatCurrency(data?.payables.pendingTotal ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FinanceStatCard
+          label="Receita disponível"
+          value={formatCurrency(data?.receivables.availableTotal ?? 0)}
+          icon={Wallet}
+          tone="emerald"
+        />
+        <FinanceStatCard
+          label="Recebido retido"
+          value={formatCurrency(data?.receivables.heldTotal ?? 0)}
+          icon={Clock}
+          tone="sky"
+        />
+        <FinanceStatCard
+          label="A receber"
+          value={formatCurrency(data?.receivables.pendingTotal ?? 0)}
+          icon={TrendingUp}
+          tone="amber"
+        />
+        <FinanceStatCard
+          label="Despesas pendentes"
+          value={formatCurrency(data?.payables.pendingTotal ?? 0)}
+          icon={ArrowUpRight}
+          tone="rose"
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Entradas no mês</p>
-            <p className="text-lg font-bold text-success">
-              {formatCurrency(data?.monthReceivedIn ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Saídas no mês</p>
-            <p className="text-lg font-bold text-danger">
-              {formatCurrency(data?.monthPaidOut ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Resultado do mês</p>
-            <p
-              className={`text-lg font-bold ${
-                (data?.monthBalance ?? 0) >= 0 ? "text-success" : "text-danger"
-              }`}
-            >
-              {formatCurrency(data?.monthBalance ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <FinanceStatCard
+          label="Entradas no mês"
+          value={formatCurrency(data?.monthReceivedIn ?? 0)}
+          icon={ArrowDownLeft}
+          tone="emerald"
+          hint="Pagamentos recebidos neste mês"
+        />
+        <FinanceStatCard
+          label="Saídas no mês"
+          value={formatCurrency(data?.monthPaidOut ?? 0)}
+          icon={ArrowUpRight}
+          tone="rose"
+          hint="Despesas pagas neste mês"
+        />
+        <FinanceStatCard
+          label="Resultado do mês"
+          value={formatCurrency(data?.monthBalance ?? 0)}
+          icon={TrendingUp}
+          tone={(data?.monthBalance ?? 0) >= 0 ? "emerald" : "rose"}
+          hint="Entradas menos saídas"
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Entradas x Saídas (últimos meses)</CardTitle>
-        </CardHeader>
-        <CardContent className="h-72">
+      <FinancePanel
+        title="Entradas x Saídas"
+        description="Últimos 6 meses"
+      >
+        <div className="h-72">
           {loading ? (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              Carregando...
+              Carregando gráfico...
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                 <Legend />
-                <Bar dataKey="Entradas" fill="#2ECC71" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Saídas" fill="#E74C3C" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Entradas" fill="hsl(var(--success))" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Saídas" fill="hsl(var(--danger))" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </FinancePanel>
 
       <div id="cashflow-report" className="hidden print:block">
         <h1>{branding.businessName}</h1>

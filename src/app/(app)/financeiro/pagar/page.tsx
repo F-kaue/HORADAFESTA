@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { Plus, Trash2, CheckCircle2, AlertCircle, Clock, Wallet } from "lucide-react";
+import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
+import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -198,12 +198,12 @@ export default function ContasAPagarPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div className="space-y-5 sm:space-y-6">
+      <FinancePageHeader
         title="Contas a pagar"
-        description="Cadastre despesas, portador e forma de pagamento"
-        action={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        description="Cadastre despesas, acompanhe vencimentos e controle portador e forma de pagamento."
+        actions={
+          <div className="flex flex-wrap gap-2">
             <ReportToolbar
               disabled={!items.length}
               onExportExcel={() => exportToExcel("contas-a-pagar", columns, exportRows)}
@@ -224,10 +224,7 @@ export default function ContasAPagarPage() {
               }
               onPrint={() => printReport("payables-report")}
             />
-            <Button
-              className="gap-2 min-h-[40px]"
-              onClick={() => setShowForm((v) => !v)}
-            >
+            <Button className="gap-2" onClick={() => setShowForm((v) => !v)}>
               <Plus className="h-4 w-4" />
               Nova despesa
             </Button>
@@ -236,39 +233,29 @@ export default function ContasAPagarPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Pendentes</p>
-            <p className="text-xl font-bold text-amber-700">
-              {formatCurrency(summary.pendingTotal)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Pagas</p>
-            <p className="text-xl font-bold text-emerald-700">
-              {formatCurrency(summary.paidTotal)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Vencidas</p>
-            <p className="text-xl font-bold text-rose-700">
-              {formatCurrency(summary.overdueTotal)}
-            </p>
-          </CardContent>
-        </Card>
+        <FinanceStatCard
+          label="Pendentes"
+          value={formatCurrency(summary.pendingTotal)}
+          icon={Clock}
+          tone="amber"
+        />
+        <FinanceStatCard
+          label="Pagas"
+          value={formatCurrency(summary.paidTotal)}
+          icon={Wallet}
+          tone="emerald"
+        />
+        <FinanceStatCard
+          label="Vencidas"
+          value={formatCurrency(summary.overdueTotal)}
+          icon={AlertCircle}
+          tone="rose"
+        />
       </div>
 
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Nova despesa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
+        <FinancePanel title="Nova despesa" description="Preencha os dados da despesa">
+          <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label>Descrição *</Label>
                 <Input
@@ -363,15 +350,11 @@ export default function ContasAPagarPage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+        </FinancePanel>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <FinancePanel title="Filtros" description="Refine a lista de despesas">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <Label>Vencimento — de</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -441,14 +424,11 @@ export default function ContasAPagarPage() {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FinancePanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Despesas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <FinancePanel title="Despesas" description="Todas as contas cadastradas">
+        <div className="space-y-3">
           {loading && (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           )}
@@ -520,8 +500,8 @@ export default function ContasAPagarPage() {
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </FinancePanel>
 
       <div id="payables-report" className="hidden print:block">
         <h1>{branding.businessName}</h1>
