@@ -24,6 +24,7 @@ import {
   type AccountPayable,
 } from "@/lib/payables";
 import { ReportToolbar } from "@/components/finance/report-toolbar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { toast } from "sonner";
@@ -58,6 +59,8 @@ export default function ContasAPagarPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState("");
   const [markPaid, setMarkPaid] = useState(false);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,15 +148,23 @@ export default function ContasAPagarPage() {
     load();
   };
 
-  const removeItem = async (id: string) => {
-    if (!confirm("Cancelar esta despesa?")) return;
-    const res = await fetch(`/api/accounts-payable/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      toast.error("Erro ao cancelar");
-      return;
+  const removeItem = async () => {
+    if (!cancelId) return;
+    setCancelLoading(true);
+    try {
+      const res = await fetch(`/api/accounts-payable/${cancelId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error("Erro ao cancelar");
+        return;
+      }
+      toast.success("Despesa cancelada");
+      setCancelId(null);
+      load();
+    } finally {
+      setCancelLoading(false);
     }
-    toast.success("Despesa cancelada");
-    load();
   };
 
   const exportRows = items.map((i) => ({
@@ -491,7 +502,7 @@ export default function ContasAPagarPage() {
                       size="sm"
                       variant="ghost"
                       className="text-danger"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => setCancelId(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -502,6 +513,17 @@ export default function ContasAPagarPage() {
           })}
         </div>
       </FinancePanel>
+
+      <ConfirmDialog
+        open={Boolean(cancelId)}
+        onOpenChange={(open) => !open && setCancelId(null)}
+        variant="danger"
+        title="Cancelar despesa?"
+        description="A despesa será removida da lista de contas a pagar. Essa ação não pode ser desfeita."
+        confirmLabel="Sim, cancelar"
+        loading={cancelLoading}
+        onConfirm={removeItem}
+      />
 
       <div id="payables-report" className="hidden print:block">
         <h1>{branding.businessName}</h1>

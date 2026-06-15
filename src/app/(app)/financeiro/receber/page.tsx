@@ -34,11 +34,17 @@ import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-pa
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ManualReceivableDialog } from "@/components/finance/manual-receivable-dialog";
 import { ReceivableDetailPanel } from "@/components/finance/receivable-detail-panel";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+type PageConfirm =
+  | { kind: "release"; row: ReceivableLeadRow }
+  | { kind: "hold"; row: ReceivableLeadRow }
+  | { kind: "delete"; id: string; clientName: string };
 
 export default function ContasAReceberPage() {
   const branding = useReportBranding();
@@ -51,6 +57,8 @@ export default function ContasAReceberPage() {
   const [releasingId, setReleasingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [selected, setSelected] = useState<ReceivableLeadRow | null>(null);
+  const [pageConfirm, setPageConfirm] = useState<PageConfirm | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,70 +97,51 @@ export default function ContasAReceberPage() {
   const releaseUrl = (id: string, source: "lead" | "manual") =>
     `/api/finance/receivables/${id}/release${source === "manual" ? "?source=manual" : ""}`;
 
-  const releaseRevenue = async (
-    id: string,
-    source: "lead" | "manual",
-    clientName: string
-  ) => {
-    if (
-      !confirm(
-        `Confirmar que o saldo recebido de ${clientName} já pode contar como receita disponível?`
-      )
-    ) {
-      return;
-    }
-    setReleasingId(id);
+  const executePageConfirm = async () => {
+    if (!pageConfirm) return;
+    setConfirmLoading(true);
     try {
-      const res = await fetch(releaseUrl(id, source), { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error || "Erro ao liberar saldo");
-        return;
+      if (pageConfirm.kind === "release" || pageConfirm.kind === "hold") {
+        const { row } = pageConfirm;
+        setReleasingId(row.leadId);
+        const res = await fetch(releaseUrl(row.leadId, row.source), {
+          method: pageConfirm.kind === "release" ? "POST" : "DELETE",
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          toast.error(json.error || "Erro ao atualizar saldo");
+          return;
+        }
+        toast.success(
+          pageConfirm.kind === "release"
+            ? "Saldo confirmado como disponível"
+            : "Saldo voltou para retido"
+        );
+      } else {
+        const res = await fetch(
+          `/api/finance/manual-receivables/${pageConfirm.id}`,
+          { method: "DELETE" }
+        );
+        if (!res.ok) {
+          toast.error("Erro ao remover");
+          return;
+        }
+        toast.success("Recebível removido");
       }
-      toast.success("Saldo confirmado como disponível");
+      setPageConfirm(null);
       load();
     } finally {
+      setConfirmLoading(false);
       setReleasingId(null);
     }
   };
 
-  const holdRevenue = async (
-    id: string,
-    source: "lead" | "manual",
-    clientName: string
-  ) => {
-    if (
-      !confirm(`Voltar o saldo de ${clientName} para recebido retido?`)
-    ) {
-      return;
-    }
-    setReleasingId(id);
-    try {
-      const res = await fetch(releaseUrl(id, source), { method: "DELETE" });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error || "Erro ao atualizar");
-        return;
-      }
-      toast.success("Saldo voltou para retido");
-      load();
-    } finally {
-      setReleasingId(null);
-    }
-  };
-
-  const removeManual = async (id: string, clientName: string) => {
-    if (!confirm(`Remover o recebível manual de ${clientName}?`)) return;
-    const res = await fetch(`/api/finance/manual-receivables/${id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      toast.error("Erro ao remover");
-      return;
-    }
-    toast.success("Recebível removido");
-    load();
-  };
+  const askRelease = (row: ReceivableLeadRow) =>
+    setPageConfirm({ kind: "release", row });
+  const askHold = (row: ReceivableLeadRow) =>
+    setPageConfirm({ kind: "hold", row });
+  const askDeleteManual = (id: string, clientName: string) =>
+    setPageConfirm({ kind: "delete", id, clientName });
 
   const exportRows = (data?.rows ?? []).map((r) => ({
     origem: r.source === "manual" ? "Manual" : "Evento CRM",
@@ -411,23 +400,32 @@ export default function ContasAReceberPage() {
                     {r.held > 0 && r.received > 0 && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="gap-1 text-xs"
+                        className="gap-1 text-xs bg-emerald-600 hover:bg-emerald-600/90"
                         disabled={releasingId === r.leadId}
-                        onClick={() =>
-                          releaseRevenue(r.leadId, r.source, r.clientName)
-                        }
+                        onClick={() => askRelease(r)}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Confirmar saldo
+                        Liberar
+                      </Button>
+                    )}
+                    {r.manuallyReleased && r.received > 0 && r.held === 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-xs border-sky-300 bg-sky-50 text-sky-900"
+                        disabled={releasingId === r.leadId}
+                        onClick={() => askHold(r)}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Retido
                       </Button>
                     )}
                     {r.source === "manual" && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-danger"
-                        onClick={() => removeManual(r.leadId, r.clientName)}
+                        className="text-danger hover:bg-rose-50"
+                        onClick={() => askDeleteManual(r.leadId, r.clientName)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -515,36 +513,32 @@ export default function ContasAReceberPage() {
                           {r.held > 0 && r.received > 0 && (
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="h-8 gap-1 text-xs"
+                              className="h-8 gap-1 text-xs bg-emerald-600 hover:bg-emerald-600/90"
                               disabled={releasingId === r.leadId}
-                              onClick={() =>
-                                releaseRevenue(r.leadId, r.source, r.clientName)
-                              }
+                              onClick={() => askRelease(r)}
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Confirmar
+                              Liberar
                             </Button>
                           )}
                           {r.manuallyReleased && r.received > 0 && r.held === 0 && (
                             <Button
                               size="sm"
-                              variant="ghost"
-                              className="h-8 gap-1 text-xs"
+                              variant="outline"
+                              className="h-8 gap-1 text-xs border-sky-300 bg-sky-50 text-sky-900"
                               disabled={releasingId === r.leadId}
-                              onClick={() =>
-                                holdRevenue(r.leadId, r.source, r.clientName)
-                              }
+                              onClick={() => askHold(r)}
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
+                              Retido
                             </Button>
                           )}
                           {r.source === "manual" && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 text-danger"
-                              onClick={() => removeManual(r.leadId, r.clientName)}
+                              className="h-8 text-danger hover:bg-rose-50"
+                              onClick={() => askDeleteManual(r.leadId, r.clientName)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -585,6 +579,74 @@ export default function ContasAReceberPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={pageConfirm?.kind === "release"}
+        onOpenChange={(open) => !open && setPageConfirm(null)}
+        variant="success"
+        title="Liberar saldo recebido?"
+        description={
+          pageConfirm?.kind === "release" ? (
+            <>
+              O valor recebido de <strong>{pageConfirm.row.clientName}</strong> passará
+              a contar como <strong>receita disponível</strong>.
+              {pageConfirm.row.held > 0 && (
+                <>
+                  {" "}
+                  Serão liberados{" "}
+                  <strong>{formatCurrency(pageConfirm.row.held)}</strong>.
+                </>
+              )}
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Sim, liberar"
+        loading={confirmLoading}
+        onConfirm={executePageConfirm}
+      />
+
+      <ConfirmDialog
+        open={pageConfirm?.kind === "hold"}
+        onOpenChange={(open) => !open && setPageConfirm(null)}
+        variant="warning"
+        title="Marcar saldo como retido?"
+        description={
+          pageConfirm?.kind === "hold" ? (
+            <>
+              O saldo de <strong>{pageConfirm.row.clientName}</strong> voltará para{" "}
+              <strong>recebido retido</strong> e deixará de contar como receita
+              disponível.
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Sim, marcar retido"
+        loading={confirmLoading}
+        onConfirm={executePageConfirm}
+      />
+
+      <ConfirmDialog
+        open={pageConfirm?.kind === "delete"}
+        onOpenChange={(open) => !open && setPageConfirm(null)}
+        variant="danger"
+        title="Remover recebível manual?"
+        description={
+          pageConfirm?.kind === "delete" ? (
+            <>
+              O cadastro manual de <strong>{pageConfirm.clientName}</strong> será
+              removido da lista. Essa ação não pode ser desfeita.
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Sim, remover"
+        loading={confirmLoading}
+        onConfirm={executePageConfirm}
+      />
 
       <ReceivableDetailPanel
         row={selected}

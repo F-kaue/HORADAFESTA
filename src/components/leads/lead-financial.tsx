@@ -28,6 +28,7 @@ import type {
 } from "@/types/database";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface LeadFinancialProps {
   lead: Lead;
@@ -69,6 +70,8 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
   const [receiptNotes, setReceiptNotes] = useState("");
   const [receiptTarget, setReceiptTarget] = useState<string>("auto");
   const [savingReceipt, setSavingReceipt] = useState(false);
+  const [deleteTxId, setDeleteTxId] = useState<string | null>(null);
+  const [deletingTx, setDeletingTx] = useState(false);
 
   const applyBundle = (data: {
     payment?: Payment | null;
@@ -221,16 +224,24 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
     onUpdate();
   };
 
-  const deleteReceipt = async (txId: string) => {
-    if (!confirm("Remover este recebimento do extrato?")) return;
-    const res = await fetch(`/api/payments/transactions/${txId}`, { method: "DELETE" });
-    if (!res.ok) {
-      toast.error("Erro ao remover");
-      return;
+  const deleteReceipt = async () => {
+    if (!deleteTxId) return;
+    setDeletingTx(true);
+    try {
+      const res = await fetch(`/api/payments/transactions/${deleteTxId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error("Erro ao remover");
+        return;
+      }
+      toast.success("Recebimento removido");
+      setDeleteTxId(null);
+      load();
+      onUpdate();
+    } finally {
+      setDeletingTx(false);
     }
-    toast.success("Recebimento removido");
-    load();
-    onUpdate();
   };
 
   if (lead.status !== "confirmado" && lead.status !== "finalizado") {
@@ -503,12 +514,13 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
                     </div>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-danger"
-                      onClick={() => deleteReceipt(tx.id)}
-                      aria-label="Excluir"
+                      size="sm"
+                      className="shrink-0 gap-1 text-muted-foreground hover:bg-rose-50 hover:text-danger"
+                      onClick={() => setDeleteTxId(tx.id)}
+                      aria-label="Excluir recebimento"
                     >
                       <Trash2 className="h-4 w-4" />
+                      <span className="text-xs font-semibold">Excluir</span>
                     </Button>
                   </li>
                 ))}
@@ -594,6 +606,17 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTxId)}
+        onOpenChange={(open) => !open && setDeleteTxId(null)}
+        variant="danger"
+        title="Remover recebimento?"
+        description="Este lançamento será excluído do extrato e os valores do contrato serão recalculados."
+        confirmLabel="Sim, excluir"
+        loading={deletingTx}
+        onConfirm={deleteReceipt}
+      />
     </div>
   );
 }

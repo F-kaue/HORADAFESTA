@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency, formatDate, parseCurrencyBRL } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type ManualTransaction = {
   id: string;
@@ -53,6 +54,8 @@ export function ManualReceivableFinancial({
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [receiptNotes, setReceiptNotes] = useState("");
   const [savingReceipt, setSavingReceipt] = useState(false);
+  const [deleteTxId, setDeleteTxId] = useState<string | null>(null);
+  const [deletingTx, setDeletingTx] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,19 +135,25 @@ export function ManualReceivableFinancial({
     onUpdate();
   };
 
-  const deleteReceipt = async (txId: string) => {
-    if (!confirm("Remover este recebimento do extrato?")) return;
-    const res = await fetch(
-      `/api/finance/manual-receivables/${receivableId}/transactions/${txId}`,
-      { method: "DELETE" }
-    );
-    if (!res.ok) {
-      toast.error("Erro ao remover");
-      return;
+  const deleteReceipt = async () => {
+    if (!deleteTxId) return;
+    setDeletingTx(true);
+    try {
+      const res = await fetch(
+        `/api/finance/manual-receivables/${receivableId}/transactions/${deleteTxId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        toast.error("Erro ao remover");
+        return;
+      }
+      toast.success("Recebimento removido");
+      setDeleteTxId(null);
+      load();
+      onUpdate();
+    } finally {
+      setDeletingTx(false);
     }
-    toast.success("Recebimento removido");
-    load();
-    onUpdate();
   };
 
   if (loading) {
@@ -296,18 +305,30 @@ export function ManualReceivableFinancial({
                 </div>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-muted-foreground hover:text-danger"
-                  onClick={() => deleteReceipt(tx.id)}
-                  aria-label="Excluir"
+                  size="sm"
+                  className="shrink-0 gap-1 text-muted-foreground hover:bg-rose-50 hover:text-danger"
+                  onClick={() => setDeleteTxId(tx.id)}
+                  aria-label="Excluir recebimento"
                 >
                   <Trash2 className="h-4 w-4" />
+                  <span className="text-xs font-semibold">Excluir</span>
                 </Button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTxId)}
+        onOpenChange={(open) => !open && setDeleteTxId(null)}
+        variant="danger"
+        title="Remover recebimento?"
+        description="Este lançamento será excluído do extrato e o total recebido será recalculado."
+        confirmLabel="Sim, excluir"
+        loading={deletingTx}
+        onConfirm={deleteReceipt}
+      />
     </div>
   );
 }
