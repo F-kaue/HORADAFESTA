@@ -154,6 +154,21 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
             <AvailabilityCalendar selectedDate={eventDate} onSelectDate={setEventDate} />
           </div>
           <div className="space-y-2">
+            <Label>Tipo de evento *</Label>
+            <Select value={eventType} onValueChange={setEventType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {eventTypeOptions.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Tipo de serviço</Label>
             <Select value={serviceType} onValueChange={setServiceType}>
               <SelectTrigger>
@@ -205,21 +220,6 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
               max={500}
               step={10}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>Tipo de evento *</Label>
-            <Select value={eventType} onValueChange={setEventType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {eventTypeOptions.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-2">
             <Label>Observações</Label>

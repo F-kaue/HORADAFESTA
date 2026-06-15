@@ -223,6 +223,26 @@ export default function OrcamentoPage() {
                 />
               </FormField>
 
+              <FormField label="Tipo de evento *">
+                <Select
+                  value={eventType}
+                  onValueChange={setEventType}
+                  required
+                  disabled={catalogLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+
               <FormField label="Tipo de serviço *">
                 <Select
                   value={serviceType}
@@ -300,26 +320,6 @@ export default function OrcamentoPage() {
                   <span>500+</span>
                 </div>
               </div>
-
-              <FormField label="Tipo de evento *">
-                <Select
-                  value={eventType}
-                  onValueChange={setEventType}
-                  required
-                  disabled={catalogLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {eventTypeOptions.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
 
               <FormField label="Observações" hint="Opcional — tema, restrições, preferências">
                 <Textarea
