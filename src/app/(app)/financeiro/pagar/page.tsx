@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, CheckCircle2, AlertCircle, Clock, Wallet } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, AlertCircle, Clock, Wallet, Pencil } from "lucide-react";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
+import { PayableEditDialog } from "@/components/finance/payable-edit-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,7 @@ export default function ContasAPagarPage() {
   const [markPaid, setMarkPaid] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [editing, setEditing] = useState<AccountPayable | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -485,7 +487,18 @@ export default function ContasAPagarPage() {
                       : STATUS_LABELS[item.status]}
                   </span>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {item.status !== "cancelado" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      onClick={() => setEditing(item)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </Button>
+                  )}
                   {item.status === "pendente" && (
                     <Button
                       size="sm"
@@ -513,6 +526,13 @@ export default function ContasAPagarPage() {
           })}
         </div>
       </FinancePanel>
+
+      <PayableEditDialog
+        item={editing}
+        open={Boolean(editing)}
+        onClose={() => setEditing(null)}
+        onSaved={load}
+      />
 
       <ConfirmDialog
         open={Boolean(cancelId)}
