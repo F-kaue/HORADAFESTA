@@ -62,7 +62,7 @@ export default function OrcamentoPage() {
   const [observations, setObservations] = useState("");
 
   useEffect(() => {
-    fetch("/api/catalog")
+    fetch("/api/catalog", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setEventTypes(data.event_types ?? []);

@@ -50,7 +50,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
 
   useEffect(() => {
     if (!open) return;
-    fetch("/api/catalog")
+    fetch("/api/catalog", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setEventTypes(data.event_types ?? []);
