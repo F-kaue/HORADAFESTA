@@ -6,6 +6,7 @@ import {
   Banknote,
   CheckCircle2,
   Clock,
+  Eye,
   Info,
   Plus,
   RotateCcw,
@@ -26,11 +27,13 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   RECEIVABLE_BUCKET_LABELS,
   type ReceivableBucket,
+  type ReceivableLeadRow,
   type ReceivablesSummary,
 } from "@/lib/receivables";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ManualReceivableDialog } from "@/components/finance/manual-receivable-dialog";
+import { ReceivableDetailPanel } from "@/components/finance/receivable-detail-panel";
 import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
@@ -47,6 +50,7 @@ export default function ContasAReceberPage() {
   const [eventType, setEventType] = useState("all");
   const [releasingId, setReleasingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [selected, setSelected] = useState<ReceivableLeadRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,6 +64,14 @@ export default function ContasAReceberPage() {
     });
     const json = await res.json();
     setData(json);
+    setSelected((prev) => {
+      if (!prev) return null;
+      return (
+        (json.rows as ReceivableLeadRow[] | undefined)?.find(
+          (r) => r.source === prev.source && r.leadId === prev.leadId
+        ) ?? null
+      );
+    });
     setLoading(false);
   }, [from, to, bucket, eventType]);
 
@@ -71,6 +83,8 @@ export default function ContasAReceberPage() {
     const set = new Set((data?.rows ?? []).map((r) => r.eventType).filter(Boolean));
     return Array.from(set) as string[];
   }, [data]);
+
+  const openDetail = (r: ReceivableLeadRow) => setSelected(r);
 
   const releaseUrl = (id: string, source: "lead" | "manual") =>
     `/api/finance/receivables/${id}/release${source === "manual" ? "?source=manual" : ""}`;
@@ -319,7 +333,7 @@ export default function ContasAReceberPage() {
 
       <FinancePanel
         title="Recebíveis"
-        description="Eventos do CRM e cadastros manuais"
+        description="Clique em um cliente para acompanhar pagamentos e registrar recebimentos"
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -340,7 +354,11 @@ export default function ContasAReceberPage() {
               {(data?.rows ?? []).map((r) => (
                 <article
                   key={`${r.source}-${r.leadId}`}
-                  className="rounded-xl border border-border/80 bg-muted/20 p-4"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openDetail(r)}
+                  onKeyDown={(e) => e.key === "Enter" && openDetail(r)}
+                  className="cursor-pointer rounded-xl border border-border/80 bg-muted/20 p-4 transition-colors hover:border-primary/30 hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -381,7 +399,15 @@ export default function ContasAReceberPage() {
                       </dd>
                     </div>
                   </dl>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => openDetail(r)}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Acompanhar
+                    </Button>
                     {r.held > 0 && r.received > 0 && (
                       <Button
                         size="sm"
@@ -432,7 +458,8 @@ export default function ContasAReceberPage() {
                   {(data?.rows ?? []).map((r) => (
                     <tr
                       key={`${r.source}-${r.leadId}`}
-                      className="border-b border-border/50 transition-colors hover:bg-muted/30"
+                      className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/30"
+                      onClick={() => openDetail(r)}
                     >
                       <td className="py-3.5 pr-3 font-medium">{r.clientName}</td>
                       <td className="py-3.5 pr-3">
@@ -475,8 +502,16 @@ export default function ContasAReceberPage() {
                           {RECEIVABLE_BUCKET_LABELS[r.bucket].label}
                         </span>
                       </td>
-                      <td className="py-3.5">
+                      <td className="py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-wrap gap-1">
+                          <Button
+                            size="sm"
+                            className="h-8 gap-1 text-xs"
+                            onClick={() => openDetail(r)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Acompanhar
+                          </Button>
                           {r.held > 0 && r.received > 0 && (
                             <Button
                               size="sm"
@@ -550,6 +585,13 @@ export default function ContasAReceberPage() {
           </tbody>
         </table>
       </div>
+
+      <ReceivableDetailPanel
+        row={selected}
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        onUpdated={load}
+      />
 
       <ManualReceivableDialog
         open={showManual}

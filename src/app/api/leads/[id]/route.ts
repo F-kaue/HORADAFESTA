@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncLeadGoogleCalendarFinalized } from "@/lib/google-calendar-finalize";
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const { data, error } = await supabase.from("leads").select("*").eq("id", id).single();
+  if (error || !data) {
+    return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 });
+  }
+  return NextResponse.json(data);
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

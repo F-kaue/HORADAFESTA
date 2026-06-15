@@ -77,5 +77,15 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (parsed.data.received_total > 0) {
+    await supabase.from("manual_receivable_transactions").insert({
+      manual_receivable_id: data.id,
+      amount: parsed.data.received_total,
+      paid_date: parsed.data.received_date || new Date().toISOString().slice(0, 10),
+      notes: "Lançamento inicial",
+    });
+  }
+
   return NextResponse.json(data, { status: 201 });
 }

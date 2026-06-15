@@ -233,7 +233,7 @@ export function LeadFinancial({ lead, onUpdate }: LeadFinancialProps) {
     onUpdate();
   };
 
-  if (lead.status !== "confirmado") {
+  if (lead.status !== "confirmado" && lead.status !== "finalizado") {
     return (
       <p className="text-sm font-medium text-muted-foreground">
         Confirme o evento primeiro para registrar pagamentos e entrada.
