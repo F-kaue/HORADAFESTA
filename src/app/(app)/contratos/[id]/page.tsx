@@ -35,6 +35,8 @@ import {
 import {
   formatCurrencyInput,
   formatDate,
+  maskCPF,
+  maskPhoneBR,
   parseCurrencyBRL,
 } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -86,8 +88,8 @@ export default function ContratoDetailPage({ params }: { params: { id: string } 
     setUseCustomBody(Boolean(data.body_override));
     setCustomBody(data.body_override ?? "");
     setContratanteName(data.contratante_name ?? "");
-    setContratanteCpf(data.contratante_cpf ?? "");
-    setContratantePhone(data.contratante_phone ?? "");
+    setContratanteCpf(maskCPF(data.contratante_cpf ?? ""));
+    setContratantePhone(maskPhoneBR(data.contratante_phone ?? ""));
     setEventAddress(data.event_address ?? "");
     setEventDate(data.event_date ?? "");
     setEventTime(data.event_time ?? "");
@@ -352,11 +354,21 @@ export default function ContratoDetailPage({ params }: { params: { id: string } 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>CPF</Label>
-                  <Input value={contratanteCpf} onChange={(e) => setContratanteCpf(e.target.value)} placeholder="000.000.000-00" />
+                  <Input
+                    value={contratanteCpf}
+                    onChange={(e) => setContratanteCpf(maskCPF(e.target.value))}
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Telefone</Label>
-                  <Input value={contratantePhone} onChange={(e) => setContratantePhone(e.target.value)} />
+                  <Input
+                    value={contratantePhone}
+                    onChange={(e) => setContratantePhone(maskPhoneBR(e.target.value))}
+                    placeholder="(85) 99999-9999"
+                    inputMode="tel"
+                  />
                 </div>
               </div>
               <div className="space-y-2">

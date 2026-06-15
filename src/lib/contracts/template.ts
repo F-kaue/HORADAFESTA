@@ -1,3 +1,5 @@
+import { formatCPF, formatPhoneBR } from "@/lib/utils";
+
 export const DEFAULT_CONTRACT_TEMPLATE = `CONTRATO DE PRESTAÇÃO DE SERVIÇOS
 
 {{CONTRATADA_NOME}}
@@ -236,8 +238,12 @@ export function buildContractVariables(input: {
     CONTRATADA_NOME: input.businessName || "Hora da Festa",
     CONTRATADA_CNPJ_LINHA: input.cnpj ? ` CNPJ: ${input.cnpj}.` : "",
     CONTRATANTE_NOME: input.contratante_name?.trim() || blankLine("nome"),
-    CONTRATANTE_CPF: input.contratante_cpf?.trim() || blankLine("cpf"),
-    CONTRATANTE_TELEFONE: input.contratante_phone?.trim() || blankLine("telefone"),
+    CONTRATANTE_CPF: input.contratante_cpf?.trim()
+      ? formatCPF(input.contratante_cpf)
+      : blankLine("cpf"),
+    CONTRATANTE_TELEFONE: input.contratante_phone?.trim()
+      ? formatPhoneBR(input.contratante_phone)
+      : blankLine("telefone"),
     EVENTO_ENDERECO: input.event_address?.trim() || blankLine("endereço"),
     EVENTO_DATA: formatDate(input.event_date),
     EVENTO_HORARIO: input.event_time?.trim() || blankLine("horário"),
@@ -284,7 +290,7 @@ export function leadToContractFields(lead: {
 
   return {
     contratante_name: lead.name,
-    contratante_phone: lead.whatsapp,
+    contratante_phone: formatPhoneBR(lead.whatsapp) || lead.whatsapp,
     event_address: address || "",
     event_date: lead.event_date,
     event_time: time,
