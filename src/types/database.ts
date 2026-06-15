@@ -26,37 +26,6 @@ export interface Profile {
   working_days: number[];
   blocked_dates: string[];
   whatsapp_template: string | null;
-  whatsapp_instance_name: string | null;
-  whatsapp_connection_status: "disconnected" | "connecting" | "connected";
-  created_at: string;
-}
-
-export interface WhatsAppConversation {
-  id: string;
-  remote_jid: string;
-  phone: string;
-  contact_name: string | null;
-  last_message: string | null;
-  last_message_at: string | null;
-  unread_count: number;
-  lead_id: string | null;
-  profile_picture_url: string | null;
-  created_at: string;
-  updated_at: string;
-  leads?: Pick<Lead, "id" | "name" | "status" | "event_type"> | null;
-}
-
-export interface WhatsAppMessage {
-  id: string;
-  conversation_id: string;
-  external_id: string | null;
-  remote_jid: string;
-  from_me: boolean;
-  body: string | null;
-  message_type: string;
-  media_url: string | null;
-  sent_at: string;
-  status: string | null;
   created_at: string;
 }
 
