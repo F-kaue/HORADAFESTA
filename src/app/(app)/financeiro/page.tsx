@@ -1,261 +1,253 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  CartesianGrid,
 } from "recharts";
-import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Lead } from "@/types/database";
+import { formatCurrency } from "@/lib/utils";
+import { ReportToolbar } from "@/components/finance/report-toolbar";
+import { useReportBranding } from "@/components/finance/use-report-branding";
+import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 
-const COLORS = ["#E8612C", "#F9C846", "#1A1A2E", "#2ECC71", "#F39C12", "#E74C3C"];
+type CashflowData = {
+  receivables: {
+    pendingTotal: number;
+    heldTotal: number;
+    availableTotal: number;
+    receivedTotal: number;
+  };
+  payables: { pendingTotal: number; paidTotal: number; overdueTotal: number };
+  monthReceivedIn: number;
+  monthPaidOut: number;
+  monthBalance: number;
+  availableBalance: number;
+  monthlyFlow: { month: string; in: number; out: number; balance: number }[];
+};
 
-export default function FinanceiroPage() {
-  const supabase = createClient();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [monthlyRevenue, setMonthlyRevenue] = useState<{ month: string; revenue: number }[]>([]);
-  const [received, setReceived] = useState(0);
-  const [pending, setPending] = useState(0);
-  const [byType, setByType] = useState<{ name: string; value: number }[]>([]);
+export default function FluxoDeCaixaPage() {
+  const branding = useReportBranding();
+  const [data, setData] = useState<CashflowData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/finance/cashflow", { cache: "no-store" });
+      const json = await res.json();
+      setData(json);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: confirmed } = await supabase
-        .from("leads")
-        .select("*")
-        .eq("status", "confirmado");
-
-      setLeads((confirmed as Lead[]) ?? []);
-
-      const typeCount: Record<string, number> = {};
-      (confirmed ?? []).forEach((l) => {
-        const t = l.event_type || "Outro";
-        typeCount[t] = (typeCount[t] || 0) + 1;
-      });
-      setByType(
-        Object.entries(typeCount).map(([name, value]) => ({ name, value }))
-      );
-
-      const { data: allPayments } = await supabase
-        .from("payments")
-        .select("id, total_value");
-
-      const { data: txs } = await supabase
-        .from("payment_transactions")
-        .select("amount, paid_date");
-
-      let rec = 0;
-      const monthly: Record<string, number> = {};
-
-      (txs ?? []).forEach((t) => {
-        const v = Number(t.amount);
-        rec += v;
-        if (t.paid_date) {
-          const m = t.paid_date.slice(0, 7);
-          monthly[m] = (monthly[m] || 0) + v;
-        }
-      });
-
-      const contractTotal = (allPayments ?? []).reduce(
-        (s, p) => s + Number(p.total_value),
-        0
-      );
-      const pen = Math.max(0, contractTotal - rec);
-
-      setReceived(rec);
-      setPending(pen);
-
-      const months = Object.entries(monthly)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .slice(-12)
-        .map(([m, revenue]) => ({
-          month: new Date(m + "-01").toLocaleDateString("pt-BR", {
-            month: "short",
-            year: "2-digit",
-          }),
-          revenue,
-        }));
-      setMonthlyRevenue(months);
-    };
     load();
-  }, [supabase]);
+  }, [load]);
 
-  const exportCsv = () => {
-    const headers = ["Cliente", "Data", "Valor Total", "Status"];
-    const rows = leads.map((l) => [
-      l.name,
-      l.event_date ?? "",
-      l.total_value ?? 0,
-      l.status,
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "eventos-horadafesta.csv";
-    a.click();
-  };
+  const chartData = (data?.monthlyFlow ?? []).map((m) => ({
+    month: new Date(`${m.month}-01`).toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "2-digit",
+    }),
+    Entradas: m.in,
+    Saídas: m.out,
+    Saldo: m.balance,
+  }));
 
-  const avgValue =
-    leads.length > 0
-      ? leads.reduce((s, l) => s + (Number(l.total_value) || 0), 0) / leads.length
-      : 0;
+  const exportRows =
+    data?.monthlyFlow.map((m) => ({
+      mes: m.month,
+      entradas: m.in,
+      saidas: m.out,
+      saldo: m.balance,
+    })) ?? [];
 
-  const donutData = [
-    { name: "Recebido", value: received },
-    { name: "A receber", value: pending },
+  const columns = [
+    { key: "mes", header: "Mês" },
+    {
+      key: "entradas",
+      header: "Entradas",
+      format: (r: { entradas: number }) => formatCurrency(r.entradas),
+    },
+    {
+      key: "saidas",
+      header: "Saídas",
+      format: (r: { saidas: number }) => formatCurrency(r.saidas),
+    },
+    {
+      key: "saldo",
+      header: "Saldo",
+      format: (r: { saldo: number }) => formatCurrency(r.saldo),
+    },
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6">
       <PageHeader
-        title="Financeiro"
-        description="Receitas, pendências e exportação de dados"
+        title="Fluxo de caixa"
+        description="Visão consolidada de entradas, saídas e saldo disponível"
         action={
-          <Button variant="outline" onClick={exportCsv} className="w-full sm:w-auto">
-            Exportar CSV
-          </Button>
+          <ReportToolbar
+            disabled={!data || loading}
+            onExportExcel={() =>
+              exportToExcel("fluxo-de-caixa", columns, exportRows)
+            }
+            onExportPdf={() =>
+              exportToPdf({
+                filename: "fluxo-de-caixa",
+                title: "Fluxo de Caixa",
+                branding,
+                summaryLines: data
+                  ? [
+                      `Receita disponível: ${formatCurrency(data.receivables.availableTotal)}`,
+                      `Recebido retido: ${formatCurrency(data.receivables.heldTotal)}`,
+                      `A receber: ${formatCurrency(data.receivables.pendingTotal)}`,
+                      `Despesas pendentes: ${formatCurrency(data.payables.pendingTotal)}`,
+                      `Saldo do mês: ${formatCurrency(data.monthBalance)}`,
+                    ]
+                  : [],
+                columns,
+                rows: exportRows,
+              })
+            }
+            onPrint={() => printReport("cashflow-report")}
+          />
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <p className="stat-label">Valor médio / evento</p>
-            <p className="stat-value mt-1 text-lg sm:text-xl">{formatCurrency(avgValue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <p className="stat-label">Total recebido</p>
-            <p className="stat-value mt-1 text-lg text-success sm:text-xl">
-              {formatCurrency(received)}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
+              Receita disponível
+            </p>
+            <p className="mt-1 text-xl font-bold text-emerald-900 dark:text-emerald-100">
+              {formatCurrency(data?.receivables.availableTotal ?? 0)}
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <p className="stat-label">A receber</p>
-            <p className="stat-value mt-1 text-lg text-warning sm:text-xl">
-              {formatCurrency(pending)}
+        <Card className="border-sky-200 bg-sky-50/50 dark:bg-sky-950/20">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-sky-800 dark:text-sky-300">
+              Recebido retido
+            </p>
+            <p className="mt-1 text-xl font-bold text-sky-900 dark:text-sky-100">
+              {formatCurrency(data?.receivables.heldTotal ?? 0)}
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <p className="stat-label">Eventos confirmados</p>
-            <p className="stat-value mt-1 text-lg sm:text-xl">{leads.length}</p>
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">
+              A receber
+            </p>
+            <p className="mt-1 text-xl font-bold text-amber-900 dark:text-amber-100">
+              {formatCurrency(data?.receivables.pendingTotal ?? 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-rose-800 dark:text-rose-300">
+              Despesas pendentes
+            </p>
+            <p className="mt-1 text-xl font-bold text-rose-900 dark:text-rose-100">
+              {formatCurrency(data?.payables.pendingTotal ?? 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle>Receita por mês</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0e6df" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                <Bar dataKey="revenue" fill="#D94E1F" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground">Entradas no mês</p>
+            <p className="text-lg font-bold text-success">
+              {formatCurrency(data?.monthReceivedIn ?? 0)}
+            </p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader>
-            <CardTitle>Recebido vs. a receber</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={donutData}
-                  innerRadius={60}
-                  outerRadius={90}
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                  }
-                >
-                  {donutData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-              </PieChart>
-            </ResponsiveContainer>
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground">Saídas no mês</p>
+            <p className="text-lg font-bold text-danger">
+              {formatCurrency(data?.monthPaidOut ?? 0)}
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Eventos por tipo</CardTitle>
-          </CardHeader>
-          <CardContent className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={byType} dataKey="value" nameKey="name" outerRadius={80}>
-                  {byType.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground">Resultado do mês</p>
+            <p
+              className={`text-lg font-bold ${
+                (data?.monthBalance ?? 0) >= 0 ? "text-success" : "text-danger"
+              }`}
+            >
+              {formatCurrency(data?.monthBalance ?? 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Eventos confirmados</CardTitle>
+          <CardTitle>Entradas x Saídas (últimos meses)</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="py-3 pr-4">Cliente</th>
-                <th className="py-3 pr-4">Data</th>
-                <th className="py-3 pr-4">Valor total</th>
-                <th className="py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((l) => (
-                <tr key={l.id} className="border-b">
-                  <td className="py-3 pr-4 font-medium">{l.name}</td>
-                  <td className="py-3 pr-4">
-                    {l.event_date ? formatDate(l.event_date) : "—"}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {l.total_value ? formatCurrency(Number(l.total_value)) : "—"}
-                  </td>
-                  <td className="py-3">Confirmado</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <CardContent className="h-72">
+          {loading ? (
+            <div className="flex h-full items-center justify-center text-muted-foreground">
+              Carregando...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                <Legend />
+                <Bar dataKey="Entradas" fill="#2ECC71" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Saídas" fill="#E74C3C" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
+
+      <div id="cashflow-report" className="hidden print:block">
+        <h1>{branding.businessName}</h1>
+        {branding.cnpj && <p>CNPJ: {branding.cnpj}</p>}
+        <h2>Fluxo de Caixa</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Entradas</th>
+              <th>Saídas</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {exportRows.map((r) => (
+              <tr key={r.mes}>
+                <td>{r.mes}</td>
+                <td>{formatCurrency(r.entradas)}</td>
+                <td>{formatCurrency(r.saidas)}</td>
+                <td>{formatCurrency(r.saldo)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

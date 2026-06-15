@@ -14,6 +14,7 @@ export interface Profile {
   business_name: string;
   phone: string | null;
   whatsapp: string;
+  cnpj: string | null;
   google_calendar_token: Record<string, unknown> | null;
   max_events_per_day: number;
   logo_url: string | null;

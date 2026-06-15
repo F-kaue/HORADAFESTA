@@ -56,6 +56,7 @@ function ConfiguracoesContent() {
       .update({
         name: profile.name,
         business_name: profile.business_name,
+        cnpj: profile.cnpj,
         whatsapp: profile.whatsapp,
         max_events_per_day: profile.max_events_per_day,
         morning_start: profile.morning_start,
@@ -139,6 +140,14 @@ function ConfiguracoesContent() {
               onChange={(e) =>
                 setProfile({ ...profile, business_name: e.target.value })
               }
+            />
+          </div>
+          <div>
+            <Label>CNPJ (relatórios e PDF)</Label>
+            <Input
+              value={profile.cnpj ?? ""}
+              onChange={(e) => setProfile({ ...profile, cnpj: e.target.value })}
+              placeholder="00.000.000/0001-00"
             />
           </div>
           <div>
