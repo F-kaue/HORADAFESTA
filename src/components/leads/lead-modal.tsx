@@ -14,19 +14,21 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   formatCurrency,
   formatDate,
   formatCurrencyInput,
   parseCurrencyBRL,
 } from "@/lib/utils";
 import { roundMoney, splitAmount } from "@/lib/payments";
-import {
-  derivedEventTimes,
-  formatSlotsLabel,
-  normalizeSlotSelection,
-  parseLeadSlotTypes,
-  type SlotType,
-} from "@/lib/slots";
+import { addHoursToTime, formatTimeRange } from "@/lib/event-time";
+import { formatSlotsLabel } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { LeadFinancial } from "@/components/leads/lead-financial";
@@ -49,10 +51,12 @@ function defaultFirstDueDate() {
 export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   const [history, setHistory] = useState<StatusHistory[]>([]);
   const [eventDate, setEventDate] = useState("");
-  const [confirmSlots, setConfirmSlots] = useState<SlotType[]>([]);
-  const [startTime, setStartTime] = useState("");
+  const [serviceType, setServiceType] = useState("");
+  const [serviceTypes, setServiceTypes] = useState<
+    { id: string; name: string; duration_hours: number }[]
+  >([]);
+  const [startTime, setStartTime] = useState("13:00");
   const [endTime, setEndTime] = useState("");
-  const [useCustomTimes, setUseCustomTimes] = useState(false);
   const [totalValue, setTotalValue] = useState("");
   const [downPayment, setDownPayment] = useState("");
   const [installments, setInstallments] = useState("5");
@@ -74,10 +78,13 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
     );
     setInternalNotes(lead.internal_notes ?? "");
     setEventDate(lead.event_date ?? "");
-    setConfirmSlots(parseLeadSlotTypes(lead.slot_types, lead.slot_type));
-    setStartTime(lead.event_start_time ?? "");
-    setEndTime(lead.event_end_time ?? "");
-    setUseCustomTimes(Boolean(lead.event_start_time || lead.event_end_time));
+    setServiceType(lead.service_type ?? "");
+    setStartTime(lead.event_start_time?.slice(0, 5) ?? "13:00");
+    setEndTime(lead.event_end_time?.slice(0, 5) ?? "");
+    fetch("/api/service-types")
+      .then((r) => r.json())
+      .then((d) => setServiceTypes(d.items ?? []))
+      .catch(() => setServiceTypes([]));
     fetch(`/api/leads/${lead.id}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
@@ -86,21 +93,21 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
     lead?.id,
     lead?.total_value,
     lead?.internal_notes,
-    lead?.slot_type,
-    lead?.slot_types,
     lead?.event_date,
     lead?.event_start_time,
     lead?.event_end_time,
+    lead?.service_type,
   ]);
 
-  const suggestedTimes = useMemo(() => {
-    if (confirmSlots.length === 0) return null;
-    return derivedEventTimes(
-      confirmSlots,
-      useCustomTimes ? startTime : undefined,
-      useCustomTimes ? endTime : undefined
-    );
-  }, [confirmSlots, useCustomTimes, startTime, endTime]);
+  const selectedService = useMemo(
+    () => serviceTypes.find((s) => s.name === serviceType),
+    [serviceTypes, serviceType]
+  );
+
+  useEffect(() => {
+    if (!selectedService || !startTime) return;
+    setEndTime(addHoursToTime(startTime, selectedService.duration_hours));
+  }, [selectedService, startTime]);
 
   const total = parseCurrencyBRL(totalValue);
   const entrada = parseCurrencyBRL(downPayment);
@@ -137,17 +144,14 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       toast.error("Selecione a data do evento");
       return;
     }
-    const slots = normalizeSlotSelection(confirmSlots);
-    if (slots.length === 0) {
-      toast.error("Selecione ao menos um turno disponível");
+    if (!serviceType) {
+      toast.error("Selecione o tipo de serviço");
       return;
     }
-
-    const times = derivedEventTimes(
-      slots,
-      useCustomTimes ? startTime : undefined,
-      useCustomTimes ? endTime : undefined
-    );
+    if (!startTime || !endTime) {
+      toast.error("Informe o horário de início");
+      return;
+    }
 
     setConfirming(true);
     const res = await fetch(`/api/leads/${lead.id}/confirm`, {
@@ -155,9 +159,9 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event_date: eventDate,
-        slot_types: slots,
-        event_start_time: useCustomTimes ? times.start : undefined,
-        event_end_time: useCustomTimes ? times.end : undefined,
+        service_type: serviceType,
+        event_start_time: startTime,
+        event_end_time: endTime,
         total_value: amount,
         internal_notes: internalNotes || undefined,
         down_payment: entradaAmount,
@@ -206,8 +210,19 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                   ["WhatsApp", lead.whatsapp],
                   [
                     "Data",
-                    `${lead.event_date ? formatDate(lead.event_date) : "—"}${formatSlotsLabel(lead.slot_types, lead.slot_type) ? ` (${formatSlotsLabel(lead.slot_types, lead.slot_type)})` : ""}`,
+                    lead.event_date
+                      ? `${formatDate(lead.event_date)}${
+                          formatTimeRange(lead.event_start_time, lead.event_end_time)
+                            ? ` · ${formatTimeRange(lead.event_start_time, lead.event_end_time)}`
+                            : formatSlotsLabel(lead.slot_types, lead.slot_type)
+                              ? ` (${formatSlotsLabel(lead.slot_types, lead.slot_type)})`
+                              : ""
+                        }`
+                      : "—",
                   ],
+                  ...(lead.service_type
+                    ? [["Serviço", lead.service_type] as [string, string]]
+                    : []),
                   ["Local", `${lead.location} — ${lead.neighborhood}`],
                   ["Convidados", `~${lead.guest_count}`],
                   ["Tipo", lead.event_type],
@@ -257,14 +272,15 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                       Valor fechado: {formatCurrency(Number(lead.total_value))}
                     </p>
                   )}
-                  {formatSlotsLabel(lead.slot_types, lead.slot_type) && (
+                  {formatTimeRange(lead.event_start_time, lead.event_end_time) ||
+                  formatSlotsLabel(lead.slot_types, lead.slot_type) ? (
                     <p className="text-sm text-muted-foreground">
                       {lead.event_date ? formatDate(lead.event_date) : "—"} ·{" "}
-                      {formatSlotsLabel(lead.slot_types, lead.slot_type)}
-                      {lead.event_start_time && ` · ${lead.event_start_time}`}
-                      {lead.event_end_time && ` – ${lead.event_end_time}`}
+                      {formatTimeRange(lead.event_start_time, lead.event_end_time) ||
+                        formatSlotsLabel(lead.slot_types, lead.slot_type)}
+                      {lead.service_type && ` · ${lead.service_type}`}
                     </p>
-                  )}
+                  ) : null}
                   <p className="text-sm text-muted-foreground">
                     Pagamentos, entrada e recebimentos estão na aba Financeiro.
                   </p>
@@ -272,12 +288,12 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Ajuste a data se mudou, escolha os turnos (bloqueados se já
-                    houver evento) e defina o pagamento.
+                    Ajuste a data se mudou, escolha o serviço e defina o horário.
+                    O fim é calculado pela duração do serviço.
                   </p>
 
                   <div className="space-y-2">
-                    <Label>Data e turnos do evento</Label>
+                    <Label>Data do evento</Label>
                     {lead.event_date && eventDate && eventDate !== lead.event_date && (
                       <p className="text-xs font-medium text-amber-800 bg-amber-50 rounded-lg px-2 py-1">
                         Data original do lead: {formatDate(lead.event_date)} → nova:{" "}
@@ -286,53 +302,57 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                     )}
                     {activeTab === "confirm" && (
                       <AvailabilityCalendar
-                        multiSelect
                         selectedDate={eventDate}
                         onSelectDate={setEventDate}
-                        selectedSlots={confirmSlots}
-                        onChangeSlots={setConfirmSlots}
                         excludeLeadId={lead.id}
                       />
                     )}
                   </div>
 
-                  {suggestedTimes && confirmSlots.length > 0 && (
-                    <p className="text-sm font-medium text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
-                      Horário sugerido no calendário:{" "}
-                      <span className="text-foreground">
-                        {suggestedTimes.start} – {suggestedTimes.end}
-                      </span>
-                    </p>
-                  )}
+                  <div className="space-y-2">
+                    <Label>Tipo de serviço *</Label>
+                    <Select value={serviceType} onValueChange={setServiceType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o serviço" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {serviceTypes.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name} ({s.duration_hours}h)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                  <label className="flex items-center gap-2 text-sm font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={useCustomTimes}
-                      onChange={(e) => setUseCustomTimes(e.target.checked)}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    Ajustar horário manualmente
-                  </label>
-                  {useCustomTimes && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Início</Label>
-                        <Input
-                          type="time"
-                          value={startTime || suggestedTimes?.start || ""}
-                          onChange={(e) => setStartTime(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Fim</Label>
-                        <Input
-                          type="time"
-                          value={endTime || suggestedTimes?.end || ""}
-                          onChange={(e) => setEndTime(e.target.value)}
-                        />
-                      </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Horário de início *</Label>
+                      <Input
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                      />
                     </div>
+                    <div>
+                      <Label>Horário de fim</Label>
+                      <Input
+                        type="time"
+                        value={endTime}
+                        readOnly
+                        className="bg-muted/50"
+                      />
+                    </div>
+                  </div>
+
+                  {selectedService && startTime && endTime && (
+                    <p className="text-sm font-medium text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+                      Horário:{" "}
+                      <span className="text-foreground">
+                        {startTime} – {endTime}
+                      </span>{" "}
+                      ({selectedService.duration_hours}h de {selectedService.name})
+                    </p>
                   )}
 
                   <div className="space-y-4 rounded-2xl border-2 border-border bg-muted/30 p-4">

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate, timeAgo } from "@/lib/utils";
+import { formatTimeRange } from "@/lib/event-time";
 import { formatSlotsLabel } from "@/lib/slots";
 import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { LEAD_STATUS_CONFIG, type Lead, type LeadStatus } from "@/types/database";
@@ -158,10 +159,13 @@ export function LeadCard({
             <Calendar className="h-4 w-4 shrink-0 text-primary" />
             <span>
               {formatDate(lead.event_date)}
-              {formatSlotsLabel(lead.slot_types, lead.slot_type) && (
+              {(formatTimeRange(lead.event_start_time, lead.event_end_time) ||
+                formatSlotsLabel(lead.slot_types, lead.slot_type)) && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · {formatSlotsLabel(lead.slot_types, lead.slot_type)}
+                  ·{" "}
+                  {formatTimeRange(lead.event_start_time, lead.event_end_time) ||
+                    formatSlotsLabel(lead.slot_types, lead.slot_type)}
                 </span>
               )}
             </span>

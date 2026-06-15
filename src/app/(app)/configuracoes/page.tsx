@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Profile } from "@/types/database";
+import { CatalogManager } from "@/components/settings/catalog-manager";
 import { toast } from "sonner";
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -111,11 +112,13 @@ function ConfiguracoesContent() {
   const isGoogleConnected = !!profile.google_calendar_token;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 sm:space-y-8">
+    <div className="mx-auto max-w-4xl space-y-6 sm:space-y-8">
       <PageHeader
         title="Configurações"
-        description="Perfil, agenda, WhatsApp e integrações"
+        description="Perfil, catálogo, agenda, WhatsApp e integrações"
       />
+
+      <CatalogManager />
 
       <Card>
         <CardHeader>

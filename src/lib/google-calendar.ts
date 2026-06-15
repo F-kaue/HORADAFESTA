@@ -104,17 +104,22 @@ export async function createGoogleCalendarEvent(
   }
 ): Promise<string | null> {
   const tokens = await refreshAccessToken(tokenData as GoogleTokens);
-  const slots =
-    params.slotTypes?.length
-      ? params.slotTypes
-      : params.slotType
-        ? [params.slotType]
-        : (["tarde"] as SlotType[]);
-  const { start, end } = derivedEventTimes(
-    slots,
-    params.startTime,
-    params.endTime
-  );
+  let start: string;
+  let end: string;
+  if (params.startTime && params.endTime) {
+    start = params.startTime.slice(0, 5);
+    end = params.endTime.slice(0, 5);
+  } else {
+    const slots =
+      params.slotTypes?.length
+        ? params.slotTypes
+        : params.slotType
+          ? [params.slotType]
+          : (["tarde"] as SlotType[]);
+    const derived = derivedEventTimes(slots, params.startTime, params.endTime);
+    start = derived.start;
+    end = derived.end;
+  }
 
   const startDateTime = `${params.date}T${start}:00`;
   const endDateTime = `${params.date}T${end}:00`;

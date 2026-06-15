@@ -38,6 +38,7 @@ export interface Lead {
   slot_types: SlotType[] | null;
   event_start_time: string | null;
   event_end_time: string | null;
+  service_type: string | null;
   location: string | null;
   neighborhood: string | null;
   guest_count: number | null;

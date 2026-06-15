@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -21,8 +21,8 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
+import { addHoursToTime } from "@/lib/event-time";
 import { EVENT_TYPES } from "@/types/database";
-import type { SlotType } from "@/lib/slots";
 import { toast } from "sonner";
 
 interface AddLeadDialogProps {
@@ -33,21 +33,51 @@ interface AddLeadDialogProps {
 
 export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [eventTypes, setEventTypes] = useState<{ id: string; name: string }[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<
+    { id: string; name: string; duration_hours: number }[]
+  >([]);
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [slotType, setSlotType] = useState<SlotType | "">("");
+  const [serviceType, setServiceType] = useState("");
+  const [startTime, setStartTime] = useState("13:00");
   const [location, setLocation] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [guestCount, setGuestCount] = useState(100);
   const [eventType, setEventType] = useState("");
   const [observations, setObservations] = useState("");
 
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/catalog")
+      .then((r) => r.json())
+      .then((data) => {
+        setEventTypes(data.event_types ?? []);
+        setServiceTypes(data.service_types ?? []);
+      })
+      .catch(() => {});
+  }, [open]);
+
+  const selectedService = useMemo(
+    () => serviceTypes.find((s) => s.name === serviceType),
+    [serviceTypes, serviceType]
+  );
+
+  const endTime = useMemo(() => {
+    if (!startTime || !selectedService) return "";
+    return addHoursToTime(startTime, selectedService.duration_hours);
+  }, [startTime, selectedService]);
+
+  const eventTypeOptions =
+    eventTypes.length > 0 ? eventTypes.map((e) => e.name) : [...EVENT_TYPES];
+
   const reset = () => {
     setName("");
     setWhatsapp("");
     setEventDate("");
-    setSlotType("");
+    setServiceType("");
+    setStartTime("13:00");
     setLocation("");
     setNeighborhood("");
     setGuestCount(100);
@@ -71,7 +101,9 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
           name,
           whatsapp: formatWhatsApp(whatsapp),
           event_date: eventDate || undefined,
-          slot_type: slotType || undefined,
+          service_type: serviceType || undefined,
+          event_start_time: startTime || undefined,
+          event_end_time: endTime || undefined,
           location,
           neighborhood,
           guest_count: guestCount,
@@ -118,16 +150,37 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
             />
           </div>
           <div className="space-y-2">
-            <Label>Data e turno</Label>
-            <AvailabilityCalendar
-              selectedDate={eventDate}
-              onSelectDate={(d) => {
-                setEventDate(d);
-                setSlotType("");
-              }}
-              selectedSlot={slotType}
-              onSelectSlot={setSlotType}
-            />
+            <Label>Data do evento</Label>
+            <AvailabilityCalendar selectedDate={eventDate} onSelectDate={setEventDate} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo de serviço</Label>
+            <Select value={serviceType} onValueChange={setServiceType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceTypes.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name} ({s.duration_hours}h)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Início</Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Fim</Label>
+              <Input type="time" value={endTime} readOnly className="bg-muted/50" />
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -160,7 +213,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {EVENT_TYPES.map((t) => (
+                {eventTypeOptions.map((t) => (
                   <SelectItem key={t} value={t}>
                     {t}
                   </SelectItem>

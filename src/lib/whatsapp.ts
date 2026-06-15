@@ -1,10 +1,12 @@
-import { SLOT_LABELS, type SlotType } from "./slots";
 import { formatDate } from "./utils";
+import { formatTimeRange } from "./event-time";
 
 export interface LeadWhatsAppData {
   name: string;
   eventDate?: string | null;
-  slotType?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  serviceType?: string | null;
   location?: string | null;
   neighborhood?: string | null;
   guestCount?: number | null;
@@ -16,12 +18,9 @@ export function buildOrcamentoMessage(data: LeadWhatsAppData): string {
   const location = [data.location, data.neighborhood]
     .filter(Boolean)
     .join(" - ");
+  const timeRange = formatTimeRange(data.startTime, data.endTime);
   const datePart = data.eventDate
-    ? `${formatDate(data.eventDate)}${
-        data.slotType
-          ? ` (${SLOT_LABELS[data.slotType as SlotType] ?? data.slotType})`
-          : ""
-      }`
+    ? `${formatDate(data.eventDate)}${timeRange ? ` · ${timeRange}` : ""}`
     : "A definir";
 
   const lines = [
@@ -29,6 +28,7 @@ export function buildOrcamentoMessage(data: LeadWhatsAppData): string {
     "",
     `*Nome:* ${data.name}`,
     `*Data do evento:* ${datePart}`,
+    ...(data.serviceType ? [`*Serviço:* ${data.serviceType}`] : []),
     `*Local:* ${location || "—"}`,
     `*Convidados:* ~${data.guestCount ?? "—"} pessoas`,
     `*Tipo:* ${data.eventType ?? "—"}`,

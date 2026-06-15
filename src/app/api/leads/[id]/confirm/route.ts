@@ -4,24 +4,16 @@ import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import { createPaymentPlanForLead } from "@/lib/payment-server";
 import { createGoogleCalendarEvent } from "@/lib/google-calendar";
 import { roundMoney } from "@/lib/payments";
-import {
-  derivedEventTimes,
-  formatSlotsLabel,
-  normalizeSlotSelection,
-  SLOT_LABELS,
-  validateSlotsAgainstOccupied,
-  type SlotType,
-} from "@/lib/slots";
+import { formatTimeRange } from "@/lib/event-time";
+import { getBusinessProfile } from "@/lib/business";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
-
-const slotEnum = z.enum(["manha", "tarde", "noite", "dia_todo"]);
 
 const schema = z.object({
   event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  slot_types: z.array(slotEnum).min(1).optional(),
-  slot_type: slotEnum.optional(),
-  event_start_time: z.string().optional(),
-  event_end_time: z.string().optional(),
+  service_type: z.string().min(1),
+  event_start_time: z.string().min(4),
+  event_end_time: z.string().min(4),
   total_value: z.number().positive(),
   internal_notes: z.string().optional(),
   down_payment: z.number().min(0).default(0),
@@ -48,18 +40,6 @@ export async function POST(
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
   }
 
-  const slotTypes = normalizeSlotSelection(
-    parsed.data.slot_types?.length
-      ? (parsed.data.slot_types as SlotType[])
-      : parsed.data.slot_type
-        ? [parsed.data.slot_type as SlotType]
-        : []
-  );
-
-  if (slotTypes.length === 0) {
-    return NextResponse.json({ error: "Selecione ao menos um turno" }, { status: 400 });
-  }
-
   const entrada = roundMoney(parsed.data.down_payment);
   if (entrada > parsed.data.total_value) {
     return NextResponse.json(
@@ -79,42 +59,46 @@ export async function POST(
   }
 
   const eventDate = parsed.data.event_date;
+  const startTime = parsed.data.event_start_time.slice(0, 5);
+  const endTime = parsed.data.event_end_time.slice(0, 5);
 
-  const { data: occupiedRows } = await supabase
-    .from("event_slots")
-    .select("slot_type")
+  const admin = createAdminClient();
+  const profile = await getBusinessProfile(admin);
+  const maxEvents = Number(profile?.max_events_per_day ?? 2);
+
+  const { count } = await supabase
+    .from("leads")
+    .select("*", { count: "exact", head: true })
     .eq("event_date", eventDate)
     .eq("status", "confirmado")
-    .neq("lead_id", id);
+    .neq("id", id);
 
-  const occupied = (occupiedRows ?? []).map((r) => r.slot_type as SlotType);
-  const slotCheck = validateSlotsAgainstOccupied(slotTypes, occupied);
-  if (!slotCheck.ok) {
+  if ((count ?? 0) >= maxEvents) {
     return NextResponse.json(
-      {
-        error: `O turno "${SLOT_LABELS[slotCheck.slot]}" já está ocupado nesta data. Escolha outro horário ou data.`,
-      },
+      { error: "Esta data já está lotada. Escolha outra data." },
       { status: 409 }
     );
   }
 
-  const { data: profile } = await supabase
+  const scheduleLabel = formatTimeRange(startTime, endTime);
+  const serviceLabel = parsed.data.service_type;
+
+  const { data: userProfile } = await supabase
     .from("profiles")
     .select("google_calendar_token, google_calendar_id")
     .eq("id", user.id)
     .single();
 
-  const turnosLabel = formatSlotsLabel(slotTypes);
-
   let googleEventId: string | null = null;
-  if (profile?.google_calendar_token) {
+  if (userProfile?.google_calendar_token) {
     const description = [
       `Cliente: ${lead.name}`,
       `WhatsApp: ${lead.whatsapp}`,
       `Local: ${lead.location} - ${lead.neighborhood}`,
       `Convidados: ~${lead.guest_count}`,
       `Tipo: ${lead.event_type}`,
-      `Turnos: ${turnosLabel}`,
+      `Serviço: ${serviceLabel}`,
+      `Horário: ${scheduleLabel}`,
       lead.observations ? `Obs: ${lead.observations}` : "",
       parsed.data.internal_notes ? `Notas: ${parsed.data.internal_notes}` : "",
       entrada > 0 ? `Entrada: R$ ${entrada.toFixed(2)}` : "",
@@ -123,35 +107,28 @@ export async function POST(
       .join("\n");
 
     googleEventId = await createGoogleCalendarEvent(
-      profile.google_calendar_token as Record<string, unknown>,
+      userProfile.google_calendar_token as Record<string, unknown>,
       {
         title: `🎉 ${lead.event_type} — ${lead.name}`,
         description,
         date: eventDate,
-        slotTypes,
-        startTime: parsed.data.event_start_time,
-        endTime: parsed.data.event_end_time,
-        calendarId: profile.google_calendar_id ?? undefined,
+        startTime,
+        endTime,
+        calendarId: userProfile.google_calendar_id ?? undefined,
       }
     );
   }
-
-  const primarySlot = slotTypes[0];
-  const { start: eventStart, end: eventEnd } = derivedEventTimes(
-    slotTypes,
-    parsed.data.event_start_time,
-    parsed.data.event_end_time
-  );
 
   const { data: updated, error } = await supabase
     .from("leads")
     .update({
       status: "confirmado",
       event_date: eventDate,
-      slot_type: primarySlot,
-      slot_types: slotTypes,
-      event_start_time: eventStart,
-      event_end_time: eventEnd,
+      service_type: serviceLabel,
+      event_start_time: startTime,
+      event_end_time: endTime,
+      slot_type: null,
+      slot_types: null,
       total_value: parsed.data.total_value,
       internal_notes: parsed.data.internal_notes,
       confirmed_at: new Date().toISOString(),
@@ -164,20 +141,6 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await supabase.from("event_slots").delete().eq("lead_id", id);
-
-  const slotRows = slotTypes.map((slot_type) => ({
-    user_id: user.id,
-    event_date: eventDate,
-    slot_type,
-    lead_id: id,
-    status: "confirmado" as const,
-    google_event_id: googleEventId,
-  }));
-
-  const { error: slotError } = await supabase.from("event_slots").insert(slotRows);
-  if (slotError) {
-    return NextResponse.json({ error: slotError.message }, { status: 500 });
-  }
 
   const planResult = await createPaymentPlanForLead(supabase, {
     leadId: id,
@@ -209,7 +172,7 @@ export async function POST(
     googleEventId,
     message:
       entrada > 0
-        ? `Evento confirmado (${turnosLabel}) com entrada e plano criados! 🎉`
-        : `Evento confirmado (${turnosLabel}) e plano de pagamento criados! 🎉`,
+        ? `Evento confirmado (${scheduleLabel}) com entrada e plano criados! 🎉`
+        : `Evento confirmado (${scheduleLabel}) e plano de pagamento criados! 🎉`,
   });
 }

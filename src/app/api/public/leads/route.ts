@@ -7,7 +7,9 @@ const leadSchema = z.object({
   name: z.string().min(2),
   whatsapp: z.string().min(10),
   event_date: z.string().optional(),
-  slot_type: z.enum(["manha", "tarde", "noite", "dia_todo"]).optional(),
+  service_type: z.string().optional(),
+  event_start_time: z.string().optional(),
+  event_end_time: z.string().optional(),
   location: z.string().min(2),
   neighborhood: z.string().min(2),
   guest_count: z.number().min(1),
@@ -65,9 +67,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const payload = {
+    ...parsed.data,
+    event_start_time: parsed.data.event_start_time?.slice(0, 5),
+    event_end_time: parsed.data.event_end_time?.slice(0, 5),
+    user_id: ownerId,
+    status: "novo" as const,
+  };
+
   const { data, error } = await admin
     .from("leads")
-    .insert({ ...parsed.data, user_id: ownerId, status: "novo" })
+    .insert(payload)
     .select("id")
     .single();
 

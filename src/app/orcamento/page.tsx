@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { BrandLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,12 @@ import { Slider } from "@/components/ui/slider";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
 import { buildOrcamentoMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { addHoursToTime } from "@/lib/event-time";
 import { EVENT_TYPES } from "@/types/database";
-import type { SlotType } from "@/lib/slots";
 import { toast } from "sonner";
+
+type CatalogEvent = { id: string; name: string };
+type CatalogService = { id: string; name: string; duration_hours: number };
 
 function FormField({
   label,
@@ -43,20 +46,58 @@ function FormField({
 export default function OrcamentoPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [eventTypes, setEventTypes] = useState<CatalogEvent[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<CatalogService[]>([]);
+
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [slotType, setSlotType] = useState<SlotType | "">("");
+  const [serviceType, setServiceType] = useState("");
+  const [startTime, setStartTime] = useState("13:00");
   const [location, setLocation] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [guestCount, setGuestCount] = useState(100);
   const [eventType, setEventType] = useState("");
   const [observations, setObservations] = useState("");
 
+  useEffect(() => {
+    fetch("/api/catalog")
+      .then((r) => r.json())
+      .then((data) => {
+        setEventTypes(data.event_types ?? []);
+        setServiceTypes(data.service_types ?? []);
+      })
+      .catch(() => toast.error("Erro ao carregar opções do formulário"))
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  const selectedService = useMemo(
+    () => serviceTypes.find((s) => s.name === serviceType),
+    [serviceTypes, serviceType]
+  );
+
+  const endTime = useMemo(() => {
+    if (!startTime || !selectedService) return "";
+    return addHoursToTime(startTime, selectedService.duration_hours);
+  }, [startTime, selectedService]);
+
+  const eventTypeOptions =
+    eventTypes.length > 0 ? eventTypes.map((e) => e.name) : [...EVENT_TYPES];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !whatsapp || !eventDate || !slotType || !location || !neighborhood || !eventType) {
+    if (
+      !name ||
+      !whatsapp ||
+      !eventDate ||
+      !serviceType ||
+      !startTime ||
+      !location ||
+      !neighborhood ||
+      !eventType
+    ) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -70,7 +111,9 @@ export default function OrcamentoPage() {
           name,
           whatsapp: formatWhatsApp(whatsapp),
           event_date: eventDate,
-          slot_type: slotType,
+          service_type: serviceType,
+          event_start_time: startTime,
+          event_end_time: endTime,
           location,
           neighborhood,
           guest_count: guestCount,
@@ -88,7 +131,9 @@ export default function OrcamentoPage() {
       const message = buildOrcamentoMessage({
         name,
         eventDate,
-        slotType,
+        startTime,
+        endTime,
+        serviceType,
         location,
         neighborhood,
         guestCount,
@@ -170,17 +215,47 @@ export default function OrcamentoPage() {
 
           <section className="form-section">
             <p className="form-section-title mb-4">Data e horário</p>
-            <FormField label="Data do evento *">
-              <AvailabilityCalendar
-                selectedDate={eventDate}
-                onSelectDate={(d) => {
-                  setEventDate(d);
-                  setSlotType("");
-                }}
-                selectedSlot={slotType}
-                onSelectSlot={setSlotType}
-              />
-            </FormField>
+            <div className="space-y-4">
+              <FormField label="Data do evento *">
+                <AvailabilityCalendar
+                  selectedDate={eventDate}
+                  onSelectDate={setEventDate}
+                />
+              </FormField>
+
+              <FormField label="Tipo de serviço *">
+                <Select
+                  value={serviceType}
+                  onValueChange={setServiceType}
+                  disabled={catalogLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceTypes.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>
+                        {s.name} ({s.duration_hours}h)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Horário de início *">
+                  <Input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
+                </FormField>
+                <FormField label="Horário de fim" hint="Calculado pela duração do serviço">
+                  <Input type="time" value={endTime} readOnly className="bg-muted/50" />
+                </FormField>
+              </div>
+            </div>
           </section>
 
           <section className="form-section">
@@ -227,12 +302,17 @@ export default function OrcamentoPage() {
               </div>
 
               <FormField label="Tipo de evento *">
-                <Select value={eventType} onValueChange={setEventType} required>
+                <Select
+                  value={eventType}
+                  onValueChange={setEventType}
+                  required
+                  disabled={catalogLoading}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {EVENT_TYPES.map((t) => (
+                    {eventTypeOptions.map((t) => (
                       <SelectItem key={t} value={t}>
                         {t}
                       </SelectItem>
