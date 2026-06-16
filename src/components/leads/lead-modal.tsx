@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import {
   Dialog,
@@ -69,10 +69,12 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
   const [internalNotes, setInternalNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  const endTimeManualRef = useRef(false);
 
   useEffect(() => {
     if (!lead?.id) return;
     setActiveTab("info");
+    endTimeManualRef.current = false;
     setTotalValue(
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
     );
@@ -80,7 +82,9 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
     setEventDate(lead.event_date ?? "");
     setServiceType(lead.service_type ?? "");
     setStartTime(lead.event_start_time?.slice(0, 5) ?? "13:00");
-    setEndTime(lead.event_end_time?.slice(0, 5) ?? "");
+    const savedEnd = lead.event_end_time?.slice(0, 5) ?? "";
+    setEndTime(savedEnd);
+    endTimeManualRef.current = !!savedEnd;
     fetch("/api/service-types")
       .then((r) => r.json())
       .then((d) => setServiceTypes(d.items ?? []))
@@ -106,8 +110,14 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
   useEffect(() => {
     if (!selectedService || !startTime) return;
+    if (endTimeManualRef.current) return;
     setEndTime(addHoursToTime(startTime, selectedService.duration_hours));
   }, [selectedService, startTime]);
+
+  const handleServiceTypeChange = (value: string) => {
+    endTimeManualRef.current = false;
+    setServiceType(value);
+  };
 
   const total = parseCurrencyBRL(totalValue);
   const entrada = parseCurrencyBRL(downPayment);
@@ -289,7 +299,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                 <>
                   <p className="text-sm text-muted-foreground">
                     Ajuste a data se mudou, escolha o serviço e defina o horário.
-                    O fim é calculado pela duração do serviço.
+                    O fim é sugerido pela duração do serviço, mas você pode alterar.
                   </p>
 
                   <div className="space-y-2">
@@ -311,7 +321,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
                   <div className="space-y-2">
                     <Label>Tipo de serviço *</Label>
-                    <Select value={serviceType} onValueChange={setServiceType}>
+                    <Select value={serviceType} onValueChange={handleServiceTypeChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o serviço" />
                       </SelectTrigger>
@@ -335,13 +345,18 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                       />
                     </div>
                     <div>
-                      <Label>Horário de fim</Label>
+                      <Label>Horário de fim *</Label>
                       <Input
                         type="time"
                         value={endTime}
-                        readOnly
-                        className="bg-muted/50"
+                        onChange={(e) => {
+                          endTimeManualRef.current = true;
+                          setEndTime(e.target.value);
+                        }}
                       />
+                      <p className="mt-1 text-2xs text-muted-foreground">
+                        Sugerido pela duração do serviço — pode ajustar se precisar
+                      </p>
                     </div>
                   </div>
 
