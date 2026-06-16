@@ -66,10 +66,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { error } = await supabase
-    .from("accounts_payable")
-    .update({ status: "cancelado", updated_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await supabase.from("accounts_payable").delete().eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

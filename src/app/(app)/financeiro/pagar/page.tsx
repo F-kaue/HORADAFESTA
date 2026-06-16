@@ -158,10 +158,10 @@ export default function ContasAPagarPage() {
         method: "DELETE",
       });
       if (!res.ok) {
-        toast.error("Erro ao cancelar");
+        toast.error("Erro ao excluir");
         return;
       }
-      toast.success("Despesa cancelada");
+      toast.success("Despesa excluída");
       setCancelId(null);
       load();
     } finally {
@@ -477,9 +477,11 @@ export default function ContasAPagarPage() {
                       "mt-1 inline-block rounded-full px-2 py-0.5 text-2xs font-bold",
                       item.status === "pago"
                         ? "bg-emerald-100 text-emerald-800"
-                        : overdue
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-amber-100 text-amber-800"
+                        : item.status === "cancelado"
+                          ? "bg-muted text-muted-foreground"
+                          : overdue
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
                     )}
                   >
                     {overdue && item.status === "pendente"
@@ -510,16 +512,14 @@ export default function ContasAPagarPage() {
                       Pagar
                     </Button>
                   )}
-                  {item.status !== "cancelado" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger"
-                      onClick={() => setCancelId(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-danger"
+                    onClick={() => setCancelId(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             );
@@ -538,9 +538,9 @@ export default function ContasAPagarPage() {
         open={Boolean(cancelId)}
         onOpenChange={(open) => !open && setCancelId(null)}
         variant="danger"
-        title="Cancelar despesa?"
-        description="A despesa será removida da lista de contas a pagar. Essa ação não pode ser desfeita."
-        confirmLabel="Sim, cancelar"
+        title="Excluir despesa?"
+        description="O registro será apagado permanentemente. Essa ação não pode ser desfeita."
+        confirmLabel="Sim, excluir"
         loading={cancelLoading}
         onConfirm={removeItem}
       />
