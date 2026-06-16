@@ -9,10 +9,12 @@ import {
   CheckCircle2,
   Clock,
   Eye,
+  Trash2,
 } from "lucide-react";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ContractCreateDialog } from "@/components/contracts/contract-create-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -28,6 +30,7 @@ import {
 } from "@/lib/contracts/template";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ContratosPage() {
   const [items, setItems] = useState<ContractRecord[]>([]);
@@ -35,6 +38,8 @@ export default function ContratosPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,6 +64,23 @@ export default function ContratosPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const removeContract = async () => {
+    if (!deleteId) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/contracts/${deleteId}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Erro ao excluir contrato");
+        return;
+      }
+      toast.success("Contrato excluído");
+      setDeleteId(null);
+      load();
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const counts = stats;
 
@@ -128,12 +150,11 @@ export default function ContratosPage() {
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={`/contratos/${item.id}`}
-                className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-foreground">
                       {item.contratante_name || "Sem nome"}
@@ -157,17 +178,40 @@ export default function ContratosPage() {
                     </p>
                   )}
                 </div>
-                <Button size="sm" variant="outline" className="gap-1 shrink-0">
-                  <Eye className="h-4 w-4" />
-                  Abrir
-                </Button>
-              </Link>
+                <div className="flex shrink-0 gap-2">
+                  <Button size="sm" variant="outline" className="gap-1" asChild>
+                    <Link href={`/contratos/${item.id}`}>
+                      <Eye className="h-4 w-4" />
+                      Abrir
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-danger"
+                    onClick={() => setDeleteId(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </FinancePanel>
 
       <ContractCreateDialog open={showCreate} onClose={() => setShowCreate(false)} />
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        variant="danger"
+        title="Excluir contrato?"
+        description="O contrato e o anexo assinado (se houver) serão apagados permanentemente. Essa ação não pode ser desfeita."
+        confirmLabel="Sim, excluir"
+        loading={deleteLoading}
+        onConfirm={removeContract}
+      />
     </div>
   );
 }

@@ -108,10 +108,21 @@ export async function DELETE(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { error } = await supabase
+  const { data: contract } = await supabase
     .from("contracts")
-    .update({ status: "cancelado", updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .select("signed_file_path")
+    .eq("id", id)
+    .single();
+
+  if (!contract) {
+    return NextResponse.json({ error: "Contrato não encontrado" }, { status: 404 });
+  }
+
+  if (contract.signed_file_path) {
+    await supabase.storage.from("contract-documents").remove([contract.signed_file_path]);
+  }
+
+  const { error } = await supabase.from("contracts").delete().eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

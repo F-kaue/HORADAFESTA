@@ -262,13 +262,13 @@ export default function ContratoDetailPage({ params }: { params: { id: string } 
     toast.success("Modelo padrão atualizado para novos contratos");
   };
 
-  const cancelContract = async () => {
+  const deleteContract = async () => {
     const res = await fetch(`/api/contracts/${params.id}`, { method: "DELETE" });
     if (!res.ok) {
-      toast.error("Erro ao cancelar");
+      toast.error("Erro ao excluir");
       return;
     }
-    toast.success("Contrato cancelado");
+    toast.success("Contrato excluído");
     window.location.href = "/contratos";
   };
 
@@ -527,16 +527,14 @@ export default function ContratoDetailPage({ params }: { params: { id: string } 
                 </Button>
               )}
 
-              {contract.status !== "cancelado" && (
-                <Button
-                  variant="ghost"
-                  className="gap-1 text-danger"
-                  onClick={() => setShowCancel(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Cancelar contrato
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                className="gap-1 text-danger"
+                onClick={() => setShowCancel(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir contrato
+              </Button>
             </TabsContent>
           </Tabs>
         </div>
@@ -558,10 +556,10 @@ export default function ContratoDetailPage({ params }: { params: { id: string } 
         open={showCancel}
         onOpenChange={setShowCancel}
         variant="danger"
-        title="Cancelar contrato?"
-        description="O contrato será marcado como cancelado. Você pode criar outro depois se precisar."
-        confirmLabel="Sim, cancelar"
-        onConfirm={cancelContract}
+        title="Excluir contrato?"
+        description="O contrato e o anexo assinado (se houver) serão apagados permanentemente. Essa ação não pode ser desfeita."
+        confirmLabel="Sim, excluir"
+        onConfirm={deleteContract}
       />
     </div>
   );
