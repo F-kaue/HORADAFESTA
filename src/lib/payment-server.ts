@@ -149,7 +149,7 @@ export async function createPaymentPlanForLead(
     downPayment: entrada,
     installments: input.installments,
     paymentType: input.paymentType,
-    downPaymentPaid: false,
+    downPaymentPaid: input.downPaymentPaid,
     downPaymentPaidDate: input.downPaymentPaidDate,
     firstInstallmentDueDate: input.firstInstallmentDueDate,
   });

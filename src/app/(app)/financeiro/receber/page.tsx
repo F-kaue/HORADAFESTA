@@ -246,8 +246,8 @@ export default function ContasAReceberPage() {
               mas ainda não liberado para uso.
             </p>
             <p>
-              <strong className="text-foreground">Disponível:</strong> liberado na
-              semana do evento ou quando você confirma o saldo.
+              <strong className="text-foreground">Disponível:</strong> liberado
+              quando você confirma o saldo ou após o evento ser finalizado.
             </p>
           </div>
         </div>
