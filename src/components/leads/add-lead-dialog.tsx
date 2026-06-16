@@ -132,7 +132,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogTitle className="font-display text-xl font-bold">Novo lead</DialogTitle>
         <p className="text-sm text-muted-foreground">
-          Adicione manualmente — mesmo formulário do orçamento online.
+          Cadastro interno — você pode escolher qualquer data, inclusive retroativa.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -151,7 +151,11 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
           </div>
           <div className="space-y-2">
             <Label>Data do evento</Label>
-            <AvailabilityCalendar selectedDate={eventDate} onSelectDate={setEventDate} />
+            <AvailabilityCalendar
+              selectedDate={eventDate}
+              onSelectDate={setEventDate}
+              internalMode
+            />
           </div>
           <div className="space-y-2">
             <Label>Tipo de evento *</Label>

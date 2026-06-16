@@ -315,6 +315,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
                         selectedDate={eventDate}
                         onSelectDate={setEventDate}
                         excludeLeadId={lead.id}
+                        internalMode
                       />
                     )}
                   </div>

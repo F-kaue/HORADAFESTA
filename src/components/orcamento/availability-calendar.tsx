@@ -9,11 +9,14 @@ interface AvailabilityCalendarProps {
   selectedDate: string;
   onSelectDate: (date: string) => void;
   excludeLeadId?: string;
+  /** Libera datas passadas e lotadas — apenas no CRM (não no formulário público) */
+  internalMode?: boolean;
 }
 
 export function AvailabilityCalendar({
   selectedDate,
   onSelectDate,
+  internalMode = false,
 }: AvailabilityCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = selectedDate ? new Date(selectedDate + "T12:00:00") : new Date();
@@ -100,7 +103,7 @@ export function AvailabilityCalendar({
           const status = dayStatus[dateStr] ?? "available";
           const isPast = dateStr < today;
           const isSelected = selectedDate === dateStr;
-          const disabled = isPast || status === "full";
+          const disabled = internalMode ? false : isPast || status === "full";
 
           return (
             <button
@@ -119,6 +122,15 @@ export function AvailabilityCalendar({
                   !disabled &&
                   status === "partial" &&
                   "bg-accent/15 text-accent-foreground hover:bg-accent/25",
+                !isSelected &&
+                  internalMode &&
+                  isPast &&
+                  "bg-muted/30 text-muted-foreground hover:bg-muted/50",
+                !isSelected &&
+                  internalMode &&
+                  !isPast &&
+                  status === "full" &&
+                  "bg-danger/10 text-danger hover:bg-danger/20",
                 !isSelected &&
                   disabled &&
                   "cursor-not-allowed bg-muted/40 text-muted-foreground opacity-60"
@@ -141,6 +153,12 @@ export function AvailabilityCalendar({
           <span className="h-2.5 w-2.5 rounded-full bg-danger" /> Lotado
         </span>
       </div>
+
+      {internalMode && (
+        <p className="text-xs text-muted-foreground">
+          No sistema você pode escolher qualquer data, inclusive retroativa ou lotada.
+        </p>
+      )}
 
       {selectedDate && (
         <p className="text-sm font-semibold text-foreground">
