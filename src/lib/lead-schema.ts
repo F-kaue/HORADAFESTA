@@ -12,6 +12,7 @@ export const createLeadSchema = z.object({
   guest_count: z.number().min(1).default(100),
   event_type: z.string().min(1, "Selecione o tipo"),
   observations: z.string().optional(),
+  mark_as_finalized: z.boolean().optional(),
 });
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;

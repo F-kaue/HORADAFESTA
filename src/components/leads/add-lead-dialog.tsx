@@ -31,6 +31,10 @@ interface AddLeadDialogProps {
   onCreated: () => void;
 }
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) {
   const [loading, setLoading] = useState(false);
   const [eventTypes, setEventTypes] = useState<{ id: string; name: string }[]>([]);
@@ -47,6 +51,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
   const [guestCount, setGuestCount] = useState(100);
   const [eventType, setEventType] = useState("");
   const [observations, setObservations] = useState("");
+  const [markAsFinalized, setMarkAsFinalized] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -69,6 +74,8 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
     return addHoursToTime(startTime, selectedService.duration_hours);
   }, [startTime, selectedService]);
 
+  const isPastEvent = eventDate && eventDate < todayISO();
+
   const eventTypeOptions =
     eventTypes.length > 0 ? eventTypes.map((e) => e.name) : [...EVENT_TYPES];
 
@@ -83,12 +90,21 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
     setGuestCount(100);
     setEventType("");
     setObservations("");
+    setMarkAsFinalized(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !whatsapp || !location || !neighborhood || !eventType) {
-      toast.error("Preencha os campos obrigatórios");
+
+    const missing: string[] = [];
+    if (!name.trim()) missing.push("nome");
+    if (formatWhatsApp(whatsapp).length < 10) missing.push("WhatsApp válido");
+    if (!eventType) missing.push("tipo de evento");
+    if (!location.trim()) missing.push("local");
+    if (!neighborhood.trim()) missing.push("bairro");
+
+    if (missing.length) {
+      toast.error(`Preencha: ${missing.join(", ")}`);
       return;
     }
 
@@ -98,25 +114,33 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
+          name: name.trim(),
           whatsapp: formatWhatsApp(whatsapp),
           event_date: eventDate || undefined,
           service_type: serviceType || undefined,
           event_start_time: startTime || undefined,
           event_end_time: endTime || undefined,
-          location,
-          neighborhood,
+          location: location.trim(),
+          neighborhood: neighborhood.trim(),
           guest_count: guestCount,
           event_type: eventType,
-          observations: observations || undefined,
+          observations: observations.trim() || undefined,
+          mark_as_finalized: markAsFinalized && Boolean(isPastEvent),
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Erro ao criar lead");
+        const fieldErr = data.details?.fieldErrors
+          ? Object.entries(data.details.fieldErrors as Record<string, string[]>)
+              .map(([k, v]) => `${k}: ${v.join(", ")}`)
+              .join(" · ")
+          : "";
+        toast.error(fieldErr || data.error || "Erro ao criar lead");
         return;
       }
-      toast.success(`Lead ${name} adicionado`);
+      const statusNote =
+        data.status === "finalizado" ? " (finalizado — evento já realizado)" : "";
+      toast.success(`Lead ${name} adicionado${statusNote}`);
       reset();
       onClose();
       onCreated();
@@ -132,7 +156,8 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogTitle className="font-display text-xl font-bold">Novo lead</DialogTitle>
         <p className="text-sm text-muted-foreground">
-          Cadastro interno — você pode escolher qualquer data, inclusive retroativa.
+          Cadastro interno — preencha todos os campos obrigatórios (*) e role até o final para
+          salvar. Datas retroativas são permitidas.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -150,16 +175,8 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
             />
           </div>
           <div className="space-y-2">
-            <Label>Data do evento</Label>
-            <AvailabilityCalendar
-              selectedDate={eventDate}
-              onSelectDate={setEventDate}
-              internalMode
-            />
-          </div>
-          <div className="space-y-2">
             <Label>Tipo de evento *</Label>
-            <Select value={eventType} onValueChange={setEventType}>
+            <Select value={eventType} onValueChange={setEventType} required>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -172,6 +189,44 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
               </SelectContent>
             </Select>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Local *</Label>
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Bairro *</Label>
+              <Input
+                value={neighborhood}
+                onChange={(e) => setNeighborhood(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-3">
+            <Label>Data do evento</Label>
+            <AvailabilityCalendar
+              selectedDate={eventDate}
+              onSelectDate={setEventDate}
+              internalMode
+            />
+            {isPastEvent && (
+              <label className="mt-2 flex items-start gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={markAsFinalized}
+                  onChange={(e) => setMarkAsFinalized(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span>
+                  Evento já aconteceu — cadastrar como <strong>Finalizado</strong> (aparece em
+                  &quot;Ver finalizados&quot; no kanban)
+                </span>
+              </label>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Tipo de serviço</Label>
             <Select value={serviceType} onValueChange={setServiceType}>
@@ -199,20 +254,6 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
             <div className="space-y-2">
               <Label>Fim</Label>
               <Input type="time" value={endTime} readOnly className="bg-muted/50" />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Local *</Label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Bairro *</Label>
-              <Input
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                required
-              />
             </div>
           </div>
           <GuestCountField value={guestCount} onChange={setGuestCount} />

@@ -19,9 +19,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const { mark_as_finalized, ...leadData } = parsed.data;
+
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Fortaleza",
+  }).format(new Date());
+
+  const isPastEvent =
+    leadData.event_date && leadData.event_date < today;
+  const status =
+    mark_as_finalized && isPastEvent ? "finalizado" : "novo";
+
+  const insertPayload: Record<string, unknown> = {
+    ...leadData,
+    user_id: ownerId,
+    status,
+  };
+  if (status === "finalizado") {
+    insertPayload.finalized_at = new Date().toISOString();
+  }
+
   const { data, error } = await supabase
     .from("leads")
-    .insert({ ...parsed.data, user_id: ownerId, status: "novo" })
+    .insert(insertPayload)
     .select()
     .single();
 

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn, formatDate } from "@/lib/utils";
 
 interface AvailabilityCalendarProps {
@@ -155,9 +157,21 @@ export function AvailabilityCalendar({
       </div>
 
       {internalMode && (
-        <p className="text-xs text-muted-foreground">
-          No sistema você pode escolher qualquer data, inclusive retroativa ou lotada.
-        </p>
+        <div className="space-y-2">
+          <Label htmlFor="event-date-direct" className="text-xs font-semibold text-muted-foreground">
+            Ou digite a data (útil para cadastros retroativos)
+          </Label>
+          <Input
+            id="event-date-direct"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => onSelectDate(e.target.value)}
+            className="font-semibold"
+          />
+          <p className="text-xs text-muted-foreground">
+            No calendário ou no campo acima — qualquer data, inclusive passada ou lotada.
+          </p>
+        </div>
       )}
 
       {selectedDate && (
