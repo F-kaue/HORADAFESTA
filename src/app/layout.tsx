@@ -12,8 +12,11 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Hora da Festa CRM",
-  description: "CRM para buffet e eventos — Hora da Festa",
+  title: {
+    default: "Hora da Festa",
+    template: "%s | Hora da Festa",
+  },
+  description: "Hora da Festa — Buffet móvel & eventos em Caucaia e região",
 };
 
 export const viewport: Viewport = {

@@ -1,0 +1,40 @@
+.site-theme {
+  --hdf-primary: #e8612c;
+  --hdf-secondary: #1a1a2e;
+  --hdf-accent: #f9c846;
+  --hdf-surface: #fff8f3;
+  background-color: var(--hdf-surface);
+  color: var(--hdf-secondary);
+}
+
+.site-theme h1,
+.site-theme h2,
+.site-theme h3 {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.site-theme .animate-accordion-down {
+  animation: accordion-down 0.25s ease-out;
+}
+
+.site-theme .animate-accordion-up {
+  animation: accordion-up 0.25s ease-out;
+}
