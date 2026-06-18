@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +20,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Search, Inbox, RefreshCw, Radio } from "lucide-react";
+import { Search, Inbox, RefreshCw, Radio, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { LeadCard } from "./lead-card";
@@ -123,10 +123,10 @@ function KanbanColumn({
   const highlighted = isOver || dropOver;
 
   return (
-    <div className="flex w-[min(300px,85vw)] shrink-0 flex-col sm:w-[300px]">
+    <div className="flex h-full w-[min(340px,88vw)] shrink-0 flex-col sm:w-[340px]">
       <div
         className={cn(
-          "mb-3 flex items-center gap-2.5 rounded-xl px-4 py-3",
+          "mb-3 flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-3",
           styles.header
         )}
       >
@@ -144,7 +144,7 @@ function KanbanColumn({
           ref={setNodeRef}
           data-status={status}
           className={cn(
-            "flex min-h-[200px] flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
+            "kanban-col-scroll flex min-h-[120px] flex-1 flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
             styles.body,
             highlighted && "border-primary bg-primary/5 ring-2 ring-primary/30 dark:bg-primary/15"
           )}
@@ -193,8 +193,11 @@ function formatLastSync(date: Date) {
   return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function KanbanBoard() {
+export function KanbanBoard({ className }: { className?: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const boardScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
@@ -212,6 +215,45 @@ export function KanbanBoard() {
         : ALL_COLUMNS.filter((c) => c !== "finalizado"),
     [showFinalized]
   );
+
+  const updateBoardScroll = useCallback(() => {
+    const el = boardScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scrollBoard = useCallback((direction: "left" | "right") => {
+    boardScrollRef.current?.scrollBy({
+      left: direction === "left" ? -360 : 360,
+      behavior: "smooth",
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = boardScrollRef.current;
+    if (!el) return;
+
+    updateBoardScroll();
+    el.addEventListener("scroll", updateBoardScroll, { passive: true });
+
+    const ro = new ResizeObserver(updateBoardScroll);
+    ro.observe(el);
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) && !e.shiftKey) return;
+      el.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+      e.preventDefault();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      el.removeEventListener("scroll", updateBoardScroll);
+      el.removeEventListener("wheel", onWheel);
+      ro.disconnect();
+    };
+  }, [updateBoardScroll, visibleColumns.length]);
+
   const [mobileColumn, setMobileColumn] = useState<LeadStatus>("novo");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -462,93 +504,99 @@ export function KanbanBoard() {
   const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-2xl border-2 border-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:p-4">
-        <div className="relative flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border-2 pl-10 font-medium"
-          />
+    <div className={cn("flex min-h-0 flex-col gap-3", className)}>
+      <div className="flex shrink-0 flex-col gap-3 rounded-2xl border-2 border-border bg-card p-3 shadow-card sm:p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="relative min-w-0 flex-1 xl:max-w-xs">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border-2 pl-10 font-medium"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:flex xl:flex-wrap xl:items-center">
+            <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+              <SelectTrigger className="w-full border-2 font-medium xl:w-[180px]">
+                <SelectValue placeholder="Tipo de evento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {EVENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={paymentFilter}
+              onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}
+            >
+              <SelectTrigger className="w-full border-2 font-medium xl:w-[160px]">
+                <SelectValue placeholder="Pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos pagamentos</SelectItem>
+                <SelectItem value="paid">✅ Quitados</SelectItem>
+                <SelectItem value="owing">⏳ Falta receber</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={archiveFilter}
+              onValueChange={(v) => setArchiveFilter(v as ArchiveFilter)}
+            >
+              <SelectTrigger className="w-full border-2 font-medium xl:w-[140px]">
+                <SelectValue placeholder="Arquivo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="archived">📦 Arquivados</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant={showFinalized ? "secondary" : "outline"}
+              size="sm"
+              className="col-span-2 border-2 font-semibold sm:col-span-1 xl:col-span-auto"
+              onClick={() => setShowFinalized((v) => !v)}
+            >
+              🏁 {showFinalized ? "Ocultar finalizados" : "Ver finalizados"}
+            </Button>
+          </div>
         </div>
-        <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-          <SelectTrigger className="w-full border-2 font-medium sm:w-[200px]">
-            <SelectValue placeholder="Tipo de evento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {EVENT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={paymentFilter}
-          onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}
-        >
-          <SelectTrigger className="w-full border-2 font-medium sm:w-[180px]">
-            <SelectValue placeholder="Pagamento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos pagamentos</SelectItem>
-            <SelectItem value="paid">✅ Quitados</SelectItem>
-            <SelectItem value="owing">⏳ Falta receber</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={archiveFilter}
-          onValueChange={(v) => setArchiveFilter(v as ArchiveFilter)}
-        >
-          <SelectTrigger className="w-full border-2 font-medium sm:w-[160px]">
-            <SelectValue placeholder="Arquivo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="archived">📦 Arquivados</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant={showFinalized ? "secondary" : "outline"}
-          size="sm"
-          className="border-2 font-semibold"
-          onClick={() => setShowFinalized((v) => !v)}
-        >
-          🏁 {showFinalized ? "Ocultar finalizados" : "Ver finalizados"}
-        </Button>
-        <AddLeadButton onCreated={() => loadLeads()} />
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          {realtimeOn && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-2xs font-bold text-emerald-800">
-              <Radio className="h-3 w-3" aria-hidden />
-              Ao vivo
+        <div className="flex flex-wrap items-center gap-2">
+          <AddLeadButton onCreated={() => loadLeads()} />
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {realtimeOn && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-2xs font-bold text-emerald-800">
+                <Radio className="h-3 w-3" aria-hidden />
+                Ao vivo
+              </span>
+            )}
+            {lastSync && (
+              <span className="text-2xs font-semibold text-muted-foreground sm:text-xs">
+                {formatLastSync(lastSync)}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 border-2 font-semibold"
+              disabled={refreshing}
+              onClick={() => loadLeads()}
+              aria-label="Atualizar leads"
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              Atualizar
+            </Button>
+            <span className="text-xs font-bold text-foreground">
+              {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
             </span>
-          )}
-          {lastSync && (
-            <span className="text-2xs font-semibold text-muted-foreground sm:text-xs">
-              {formatLastSync(lastSync)}
-            </span>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-2 border-2 font-semibold"
-            disabled={refreshing}
-            onClick={() => loadLeads()}
-            aria-label="Atualizar leads"
-          >
-            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-            Atualizar
-          </Button>
-          <span className="text-xs font-bold text-foreground">
-            {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
-          </span>
+          </div>
         </div>
       </div>
 
@@ -625,21 +673,53 @@ export function KanbanBoard() {
           setOverColumnId(null);
         }}
       >
-        <div className="hidden lg:flex gap-4 overflow-x-auto pb-2 pt-1 scrollbar-thin">
-          {visibleColumns.map((status) => (
-            <KanbanColumn
-              key={status}
-              status={status}
-              leads={filtered.filter((l) => l.status === status)}
-              onOpen={setSelectedLead}
-              isOver={overColumnId === status}
-              paymentSummaries={paymentSummaries}
-              onArchive={handleArchive}
-              onUnarchive={handleUnarchive}
-              onFinalize={handleFinalize}
-              onDelete={handleDelete}
-            />
-          ))}
+        <div className="relative hidden min-h-0 flex-1 flex-col lg:flex">
+          <div className="mb-2 flex shrink-0 items-center gap-2">
+            <p className="mr-auto hidden text-xs font-medium text-muted-foreground xl:block">
+              Role horizontalmente na barra abaixo ou use as setas para ver mais colunas
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0 border-2"
+              disabled={!canScrollLeft}
+              onClick={() => scrollBoard("left")}
+              aria-label="Colunas anteriores"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0 border-2"
+              disabled={!canScrollRight}
+              onClick={() => scrollBoard("right")}
+              aria-label="Próximas colunas"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div
+            ref={boardScrollRef}
+            className="kanban-h-scroll flex min-h-0 flex-1 gap-4 pb-1 pt-0.5"
+          >
+            {visibleColumns.map((status) => (
+              <KanbanColumn
+                key={status}
+                status={status}
+                leads={filtered.filter((l) => l.status === status)}
+                onOpen={setSelectedLead}
+                isOver={overColumnId === status}
+                paymentSummaries={paymentSummaries}
+                onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
+                onFinalize={handleFinalize}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         </div>
         <DragOverlay dropAnimation={{ duration: 200, easing: "ease-out" }}>
           {activeLead ? (

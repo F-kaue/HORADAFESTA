@@ -116,6 +116,51 @@
     @apply mx-auto w-full max-w-7xl space-y-6 sm:space-y-8;
   }
 
+  .app-page-leads {
+    @apply w-full max-w-[1920px];
+  }
+
+  main.app-page:has(.app-page-leads) {
+    @apply max-w-none;
+  }
+
+  .kanban-h-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .kanban-h-scroll::-webkit-scrollbar {
+    height: 12px;
+  }
+
+  .kanban-h-scroll::-webkit-scrollbar-track {
+    @apply rounded-full bg-muted/80;
+  }
+
+  .kanban-h-scroll::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-primary/45;
+  }
+
+  .kanban-h-scroll::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/70;
+  }
+
+  .kanban-col-scroll {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .kanban-col-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .kanban-col-scroll::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+
   .safe-bottom {
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
