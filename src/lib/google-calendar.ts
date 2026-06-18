@@ -102,7 +102,7 @@ export async function createGoogleCalendarEvent(
     endTime?: string;
     calendarId?: string;
   }
-): Promise<string | null> {
+): Promise<{ eventId: string | null; error?: string }> {
   const tokens = await refreshAccessToken(tokenData as GoogleTokens);
   let start: string;
   let end: string;
@@ -144,9 +144,19 @@ export async function createGoogleCalendarEvent(
     }
   );
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    let error = `Google Calendar API ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) error = body.error.message;
+    } catch {
+      // ignore parse errors
+    }
+    console.error("[google-calendar] create event failed:", error);
+    return { eventId: null, error };
+  }
   const event = await res.json();
-  return event.id ?? null;
+  return { eventId: event.id ?? null };
 }
 
 export function buildCalendarEventTitle(

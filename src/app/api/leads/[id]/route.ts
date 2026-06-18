@@ -32,6 +32,25 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const body = await request.json();
+
+  if (body.status === "confirmado") {
+    const { data: current } = await supabase
+      .from("leads")
+      .select("status, confirmed_at")
+      .eq("id", id)
+      .single();
+
+    if (current?.status !== "confirmado" && !current?.confirmed_at) {
+      return NextResponse.json(
+        {
+          error:
+            "Para confirmar um lead, use a aba Confirmação no detalhe do card (não arraste para a coluna Confirmado).",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("leads")
     .update(body)
@@ -43,7 +62,7 @@ export async function PATCH(
 
   if (body.status === "finalizado" && data) {
     try {
-      await syncLeadGoogleCalendarFinalized(supabase, id);
+      await syncLeadGoogleCalendarFinalized(supabase, id, user.id);
     } catch {
       // sync opcional
     }

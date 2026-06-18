@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import { createPaymentPlanForLead } from "@/lib/payment-server";
-import { createGoogleCalendarEvent } from "@/lib/google-calendar";
+import { createCalendarEventForLead } from "@/lib/google-calendar-lead";
 import { roundMoney } from "@/lib/payments";
 import { formatTimeRange } from "@/lib/event-time";
 import { getBusinessProfile } from "@/lib/business";
@@ -90,33 +90,17 @@ export async function POST(
     .single();
 
   let googleEventId: string | null = null;
+  let googleCalendarError: string | undefined;
   if (userProfile?.google_calendar_token) {
-    const description = [
-      `Cliente: ${lead.name}`,
-      `WhatsApp: ${lead.whatsapp}`,
-      `Local: ${lead.location} - ${lead.neighborhood}`,
-      `Convidados: ~${lead.guest_count}`,
-      `Tipo: ${lead.event_type}`,
-      `Serviço: ${serviceLabel}`,
-      `Horário: ${scheduleLabel}`,
-      lead.observations ? `Obs: ${lead.observations}` : "",
-      parsed.data.internal_notes ? `Notas: ${parsed.data.internal_notes}` : "",
-      entrada > 0 ? `Entrada: R$ ${entrada.toFixed(2)}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    googleEventId = await createGoogleCalendarEvent(
-      userProfile.google_calendar_token as Record<string, unknown>,
-      {
-        title: `🎉 ${lead.event_type} — ${lead.name}`,
-        description,
-        date: eventDate,
-        startTime,
-        endTime,
-        calendarId: userProfile.google_calendar_id ?? undefined,
-      }
-    );
+    const calendarResult = await createCalendarEventForLead(supabase, user.id, lead, {
+      serviceType: serviceLabel,
+      internalNotes: parsed.data.internal_notes,
+      downPayment: entrada,
+    });
+    googleEventId = calendarResult.eventId;
+    googleCalendarError = calendarResult.error;
+  } else {
+    googleCalendarError = "Conecte o Google Calendar em Configurações para criar o evento.";
   }
 
   const { data: updated, error } = await supabase
@@ -162,7 +146,7 @@ export async function POST(
   }
 
   try {
-    await syncLeadGoogleCalendarPayment(supabase, id);
+    await syncLeadGoogleCalendarPayment(supabase, id, user.id);
   } catch {
     // Google sync opcional
   }
@@ -170,6 +154,7 @@ export async function POST(
   return NextResponse.json({
     lead: updated,
     googleEventId,
+    googleCalendarError,
     message:
       entrada > 0
         ? `Evento confirmado (${scheduleLabel}) com entrada e plano criados! 🎉`

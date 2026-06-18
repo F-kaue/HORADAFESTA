@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getBusinessProfile } from "@/lib/business";
+import { getCalendarProfile } from "@/lib/google-calendar-lead";
 import { updateGoogleCalendarPaymentStatus } from "@/lib/google-calendar";
 import { fetchPaymentBundle } from "@/lib/payment-server";
 import { formatSlotsLabel } from "@/lib/slots";
@@ -8,7 +8,8 @@ import type { SlotType } from "@/lib/slots";
 /** Sincroniza Google Calendar quando o pagamento do lead muda */
 export async function syncLeadGoogleCalendarPayment(
   supabase: SupabaseClient,
-  leadId: string
+  leadId: string,
+  userId?: string
 ): Promise<void> {
   const { data: lead } = await supabase
     .from("leads")
@@ -26,7 +27,7 @@ export async function syncLeadGoogleCalendarPayment(
   const { summary } = bundle;
   const isPaid = summary.remaining <= 0.009 && summary.received > 0;
 
-  const profile = await getBusinessProfile(supabase);
+  const profile = await getCalendarProfile(supabase, userId);
   if (!profile?.google_calendar_token) return;
 
   const turnos = formatSlotsLabel(

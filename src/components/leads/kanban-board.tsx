@@ -256,6 +256,11 @@ export function KanbanBoard({ className }: { className?: string }) {
 
   const [mobileColumn, setMobileColumn] = useState<LeadStatus>("novo");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [modalInitialTab, setModalInitialTab] = useState<"info" | "confirm" | "finance">("info");
+  const openLead = useCallback((lead: Lead, tab: "info" | "confirm" | "finance" = "info") => {
+    setModalInitialTab(tab);
+    setSelectedLead(lead);
+  }, []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumnId, setOverColumnId] = useState<LeadStatus | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -472,6 +477,16 @@ export function KanbanBoard({ className }: { className?: string }) {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === newStatus) return;
 
+    if (newStatus === "confirmado" && lead.status !== "confirmado") {
+      setModalInitialTab("confirm");
+      openLead(lead, "confirm");
+      toast.message(
+        "Para confirmar, preencha valor e horário na aba Confirmação do card.",
+        { duration: 5000 }
+      );
+      return;
+    }
+
     const patch: Record<string, unknown> = { status: newStatus };
     if (newStatus === "finalizado") {
       patch.finalized_at = new Date().toISOString();
@@ -649,7 +664,7 @@ export function KanbanBoard({ className }: { className?: string }) {
                 <LeadCard
                   key={lead.id}
                   lead={lead}
-                  onOpen={setSelectedLead}
+                  onOpen={(l) => openLead(l)}
                   paymentSummary={paymentSummaries[lead.id]}
                   onArchive={handleArchive}
                   onUnarchive={handleUnarchive}
@@ -710,7 +725,7 @@ export function KanbanBoard({ className }: { className?: string }) {
                 key={status}
                 status={status}
                 leads={filtered.filter((l) => l.status === status)}
-                onOpen={setSelectedLead}
+                onOpen={(l) => openLead(l)}
                 isOver={overColumnId === status}
                 paymentSummaries={paymentSummaries}
                 onArchive={handleArchive}
@@ -738,7 +753,11 @@ export function KanbanBoard({ className }: { className?: string }) {
       <LeadModal
         lead={selectedLead}
         open={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
+        initialTab={modalInitialTab}
+        onClose={() => {
+          setSelectedLead(null);
+          setModalInitialTab("info");
+        }}
         onUpdate={loadLeads}
       />
     </div>

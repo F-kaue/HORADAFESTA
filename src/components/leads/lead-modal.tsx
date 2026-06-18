@@ -40,6 +40,7 @@ interface LeadModalProps {
   open: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  initialTab?: "info" | "confirm" | "finance";
 }
 
 function defaultFirstDueDate() {
@@ -48,7 +49,13 @@ function defaultFirstDueDate() {
   return d.toISOString().slice(0, 10);
 }
 
-export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
+export function LeadModal({
+  lead,
+  open,
+  onClose,
+  onUpdate,
+  initialTab = "info",
+}: LeadModalProps) {
   const [history, setHistory] = useState<StatusHistory[]>([]);
   const [eventDate, setEventDate] = useState("");
   const [serviceType, setServiceType] = useState("");
@@ -73,7 +80,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
 
   useEffect(() => {
     if (!lead?.id) return;
-    setActiveTab("info");
+    setActiveTab(initialTab);
     endTimeManualRef.current = false;
     setTotalValue(
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
@@ -95,6 +102,7 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       .catch(() => setHistory([]));
   }, [
     lead?.id,
+    initialTab,
     lead?.total_value,
     lead?.internal_notes,
     lead?.event_date,
@@ -189,6 +197,13 @@ export function LeadModal({ lead, open, onClose, onUpdate }: LeadModalProps) {
       return;
     }
     toast.success(data.message);
+    if (data.googleCalendarError) {
+      toast.warning(
+        `Evento confirmado, mas o Google Calendar não foi atualizado: ${data.googleCalendarError}`
+      );
+    } else if (data.googleEventId) {
+      toast.message("Evento criado no Google Calendar.");
+    }
     onUpdate();
     onClose();
   };

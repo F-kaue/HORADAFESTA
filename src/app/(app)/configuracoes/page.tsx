@@ -20,6 +20,7 @@ function ConfiguracoesContent() {
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<Partial<Profile>>({});
   const [saving, setSaving] = useState(false);
+  const [syncingCalendar, setSyncingCalendar] = useState(false);
   const [blockedDateInput, setBlockedDateInput] = useState("");
 
   const publicUrl =
@@ -111,6 +112,29 @@ function ConfiguracoesContent() {
   };
 
   const isGoogleConnected = !!profile.google_calendar_token;
+
+  const syncPendingCalendarEvents = async () => {
+    setSyncingCalendar(true);
+    try {
+      const res = await fetch("/api/leads/sync-calendar-events", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao sincronizar calendário");
+        return;
+      }
+      if (data.created > 0) {
+        toast.success(data.message);
+      } else if (data.failed > 0) {
+        toast.warning(data.message);
+      } else {
+        toast.message(data.message);
+      }
+    } catch {
+      toast.error("Erro ao sincronizar calendário");
+    } finally {
+      setSyncingCalendar(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 sm:space-y-8">
@@ -304,9 +328,30 @@ function ConfiguracoesContent() {
           <p className="text-sm">
             {isGoogleConnected ? "✅ Conectado" : "⚠️ Não conectado"}
           </p>
-          <Button asChild variant="outline">
-            <a href="/api/google/connect">Conectar Google Calendar</a>
-          </Button>
+          <p className="text-xs text-muted-foreground">
+            O evento só é criado na agenda ao confirmar pelo card (aba Confirmação),
+            não ao arrastar o card para a coluna Confirmado.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Se o Google mostrar &quot;O Google não verificou este app&quot;, clique em
+            <strong> Avançado</strong> e depois em <strong>Ir para Hora da Festa CRM (não seguro)</strong>.
+            Isso é normal enquanto o app estiver em modo de teste no Google Cloud.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <a href="/api/google/connect">Conectar Google Calendar</a>
+            </Button>
+            {isGoogleConnected && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={syncingCalendar}
+                onClick={syncPendingCalendarEvents}
+              >
+                {syncingCalendar ? "Sincronizando..." : "Sincronizar eventos pendentes"}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

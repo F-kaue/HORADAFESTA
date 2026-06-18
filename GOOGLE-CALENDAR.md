@@ -24,8 +24,15 @@ O erro **"OAuth client was not found" (401 invalid_client)** significa que o CRM
 4. **Escopos** → Adicionar escopo:
    - `https://www.googleapis.com/auth/calendar`
 5. **Usuários de teste** (enquanto o app estiver em "Teste"):
-   - Adicione o Gmail que vai conectar a agenda, ex: `f.kaue0956@gmail.com`
+   - Adicione **todos** os Gmail que vão conectar a agenda, ex:
+     - `f_kaue@hotmail.com`
+     - `horadafestace@gmail.com`
 6. Salvar
+
+> **Tela "O Google não verificou este app"**  
+> Enquanto o app não passar pela verificação do Google, essa tela aparece para todo mundo.  
+> O usuário deve clicar em **Avançado** → **Ir para Hora da Festa CRM (não seguro)**.  
+> Para remover a tela de vez, é preciso publicar o app e solicitar verificação OAuth no Google Cloud (processo demorado).
 
 ---
 
@@ -104,6 +111,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## O que o CRM faz depois de conectado
 
 - Lê eventos da agenda para bloquear datas no formulário `/orcamento`
-- Cria evento no Google Calendar ao **confirmar** um lead no kanban
+- Cria evento no Google Calendar ao **confirmar** um lead pela aba **Confirmação** do card (não ao arrastar para a coluna Confirmado)
+- Em **Configurações**, use **Sincronizar eventos pendentes** para criar eventos de leads já confirmados que ficaram sem agenda
 
 Fuso horário dos eventos: `America/Fortaleza`

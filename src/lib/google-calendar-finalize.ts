@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getBusinessProfile } from "@/lib/business";
+import { getCalendarProfile } from "@/lib/google-calendar-lead";
 import {
   extractClientNameFromSummary,
   listGoogleCalendarEvents,
@@ -54,7 +54,8 @@ async function resolveGoogleEventId(
 /** Atualiza o evento existente no Google Calendar quando o lead é finalizado */
 export async function syncLeadGoogleCalendarFinalized(
   supabase: SupabaseClient,
-  leadId: string
+  leadId: string,
+  userId?: string
 ): Promise<void> {
   const { data: lead } = await supabase
     .from("leads")
@@ -66,10 +67,10 @@ export async function syncLeadGoogleCalendarFinalized(
 
   if (!lead) return;
 
-  const profile = await getBusinessProfile(supabase);
+  const profile = await getCalendarProfile(supabase, userId);
   if (!profile?.google_calendar_token) return;
 
-  const eventId = await resolveGoogleEventId(supabase, lead, profile);
+  const eventId = await resolveGoogleEventId(supabase, lead, profile as Record<string, unknown>);
   if (!eventId) return;
 
   const bundle = await fetchPaymentBundle(supabase, leadId);
