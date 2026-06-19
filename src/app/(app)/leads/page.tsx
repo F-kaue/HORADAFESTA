@@ -6,7 +6,7 @@ export default function LeadsPage() {
     <div className="app-page-leads space-y-6">
       <PageHeader
         title="Kanban de Leads"
-        description="Arraste entre colunas. Role horizontalmente nas setas ou na barra logo abaixo dos filtros."
+        description="Arraste entre colunas. A barra horizontal fica fixa no topo ao rolar a página."
       />
       <KanbanBoard />
     </div>

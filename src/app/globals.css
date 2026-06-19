@@ -130,6 +130,25 @@
     scrollbar-gutter: stable;
   }
 
+  .kanban-h-scroll-top {
+    overflow-y: hidden;
+    height: 14px;
+  }
+
+  .kanban-h-scroll-content {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .kanban-h-scroll-content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kanban-scroll-sticky {
+    @apply border-b border-border/60 bg-background/95 backdrop-blur-sm;
+  }
+
   .kanban-h-scroll::-webkit-scrollbar {
     height: 12px;
   }

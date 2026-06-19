@@ -196,6 +196,9 @@ function formatLastSync(date: Date) {
 export function KanbanBoard({ className }: { className?: string }) {
   const supabase = useMemo(() => createClient(), []);
   const boardScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+  const [scrollContentWidth, setScrollContentWidth] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -219,9 +222,23 @@ export function KanbanBoard({ className }: { className?: string }) {
   const updateBoardScroll = useCallback(() => {
     const el = boardScrollRef.current;
     if (!el) return;
+    setScrollContentWidth(el.scrollWidth);
     setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   }, []);
+
+  const syncScrollLeft = useCallback(
+    (source: HTMLDivElement, target: HTMLDivElement | null) => {
+      if (!target || isSyncingScroll.current) return;
+      if (Math.abs(target.scrollLeft - source.scrollLeft) < 1) return;
+      isSyncingScroll.current = true;
+      target.scrollLeft = source.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    },
+    []
+  );
 
   const scrollBoard = useCallback((direction: "left" | "right") => {
     boardScrollRef.current?.scrollBy({
@@ -231,28 +248,43 @@ export function KanbanBoard({ className }: { className?: string }) {
   }, []);
 
   useEffect(() => {
-    const el = boardScrollRef.current;
-    if (!el) return;
+    const board = boardScrollRef.current;
+    const top = topScrollRef.current;
+    if (!board) return;
+
+    const onBoardScroll = () => {
+      updateBoardScroll();
+      syncScrollLeft(board, top);
+    };
+
+    const onTopScroll = () => {
+      if (!top) return;
+      updateBoardScroll();
+      syncScrollLeft(top, board);
+    };
 
     updateBoardScroll();
-    el.addEventListener("scroll", updateBoardScroll, { passive: true });
+    board.addEventListener("scroll", onBoardScroll, { passive: true });
+    top?.addEventListener("scroll", onTopScroll, { passive: true });
 
     const ro = new ResizeObserver(updateBoardScroll);
-    ro.observe(el);
+    ro.observe(board);
 
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) && !e.shiftKey) return;
-      el.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+      board.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+      syncScrollLeft(board, top);
       e.preventDefault();
     };
-    el.addEventListener("wheel", onWheel, { passive: false });
+    board.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
-      el.removeEventListener("scroll", updateBoardScroll);
-      el.removeEventListener("wheel", onWheel);
+      board.removeEventListener("scroll", onBoardScroll);
+      top?.removeEventListener("scroll", onTopScroll);
+      board.removeEventListener("wheel", onWheel);
       ro.disconnect();
     };
-  }, [updateBoardScroll, visibleColumns.length]);
+  }, [updateBoardScroll, syncScrollLeft, visibleColumns.length, leads.length]);
 
   const [mobileColumn, setMobileColumn] = useState<LeadStatus>("novo");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -689,36 +721,49 @@ export function KanbanBoard({ className }: { className?: string }) {
         }}
       >
         <div className="relative hidden lg:block">
-          <div className="mb-2 flex items-center gap-2">
-            <p className="mr-auto hidden text-xs font-medium text-muted-foreground xl:block">
-              Role horizontalmente na barra abaixo ou use as setas para ver mais colunas
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0 border-2"
-              disabled={!canScrollLeft}
-              onClick={() => scrollBoard("left")}
-              aria-label="Colunas anteriores"
+          <div className="kanban-scroll-sticky sticky top-[4.25rem] z-20 -mx-1 mb-3 px-1 pb-2 pt-1">
+            <div className="mb-2 flex items-center gap-2">
+              <p className="mr-auto hidden text-xs font-medium text-muted-foreground xl:block">
+                Barra fixa no topo ao rolar — use as setas ou arraste a barra laranja
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0 border-2"
+                disabled={!canScrollLeft}
+                onClick={() => scrollBoard("left")}
+                aria-label="Colunas anteriores"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0 border-2"
+                disabled={!canScrollRight}
+                onClick={() => scrollBoard("right")}
+                aria-label="Próximas colunas"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div
+              ref={topScrollRef}
+              className="kanban-h-scroll kanban-h-scroll-top"
+              aria-label="Rolagem horizontal do kanban"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0 border-2"
-              disabled={!canScrollRight}
-              onClick={() => scrollBoard("right")}
-              aria-label="Próximas colunas"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <div
+                className="h-px"
+                style={{ width: scrollContentWidth || "100%" }}
+                aria-hidden
+              />
+            </div>
           </div>
           <div
             ref={boardScrollRef}
-            className="kanban-h-scroll flex gap-4 pb-2 pt-1"
+            className="kanban-h-scroll-content flex gap-4 pb-2 pt-1"
           >
             {visibleColumns.map((status) => (
               <KanbanColumn
