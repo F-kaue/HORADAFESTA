@@ -39,7 +39,7 @@ function buildTitle(lead: Lead, google?: GoogleCalendarEventRow): string {
       .replace(/^🏁 REALIZADO · /, "")
       .replace(/^✅ QUITADO · /, "");
   }
-  if (lead.event_type) return `🎉 ${lead.event_type} — ${lead.name}`;
+  if (lead.event_type) return `${lead.name} - ${lead.event_type}`;
   return lead.name;
 }
 

@@ -276,7 +276,11 @@ export async function createCalendarEventForLead(
   const result = await createGoogleCalendarEvent(
     profile.google_calendar_token,
     {
-      title: `🎉 ${lead.event_type} — ${lead.name}`,
+      title: buildCalendarEventTitle(
+        lead.event_type ?? "Evento",
+        lead.name,
+        false
+      ),
       description,
       date: schedule.date,
       startTime: schedule.startTime,

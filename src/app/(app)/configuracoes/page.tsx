@@ -122,7 +122,7 @@ function ConfiguracoesContent() {
         toast.error(data.error || "Erro ao sincronizar calendário");
         return;
       }
-      if (data.created > 0) {
+      if (data.created > 0 || data.updated > 0) {
         toast.success(data.message);
       } else if (data.failed > 0) {
         toast.warning(data.message);
@@ -348,7 +348,7 @@ function ConfiguracoesContent() {
                 disabled={syncingCalendar}
                 onClick={syncPendingCalendarEvents}
               >
-                {syncingCalendar ? "Sincronizando..." : "Sincronizar eventos pendentes"}
+                {syncingCalendar ? "Sincronizando..." : "Sincronizar calendário"}
               </Button>
             )}
           </div>

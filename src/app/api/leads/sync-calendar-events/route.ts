@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createCalendarEventForLead } from "@/lib/google-calendar-lead";
+import { syncLeadGoogleCalendarDetails } from "@/lib/google-calendar-lead";
 import type { Lead } from "@/types/database";
 
-/** Cria eventos no Google Calendar para leads confirmados sem google_event_id */
+/** Cria ou atualiza eventos no Google Calendar para leads confirmados/finalizados */
 export async function POST() {
   const supabase = await createClient();
   const {
@@ -17,7 +17,6 @@ export async function POST() {
     .from("leads")
     .select("*")
     .in("status", ["confirmado", "finalizado"])
-    .is("google_event_id", null)
     .not("event_date", "is", null);
 
   if (error) {
@@ -28,52 +27,41 @@ export async function POST() {
     id: string;
     name: string;
     ok: boolean;
-    eventId?: string;
+    created: boolean;
     error?: string;
   }> = [];
 
   for (const lead of (leads ?? []) as Lead[]) {
-    const calendarResult = await createCalendarEventForLead(
+    const calendarResult = await syncLeadGoogleCalendarDetails(
       supabase,
-      user.id,
-      lead
+      lead.id,
+      user.id
     );
 
-    if (calendarResult.eventId) {
-      await supabase
-        .from("leads")
-        .update({ google_event_id: calendarResult.eventId })
-        .eq("id", lead.id);
-
-      results.push({
-        id: lead.id,
-        name: lead.name,
-        ok: true,
-        eventId: calendarResult.eventId,
-      });
-    } else {
-      results.push({
-        id: lead.id,
-        name: lead.name,
-        ok: false,
-        error: calendarResult.error,
-      });
-    }
+    results.push({
+      id: lead.id,
+      name: lead.name,
+      ok: calendarResult.synced,
+      created: calendarResult.created,
+      error: calendarResult.error,
+    });
   }
 
-  const created = results.filter((r) => r.ok).length;
-  const failed = results.filter((r) => !r.ok).length;
+  const updated = results.filter((r) => r.ok && !r.created).length;
+  const created = results.filter((r) => r.ok && r.created).length;
+  const failed = results.filter((r) => !r.ok && r.error).length;
 
   return NextResponse.json({
     created,
+    updated,
     failed,
     total: results.length,
     results,
     message:
-      created > 0
-        ? `${created} evento(s) criado(s) no Google Calendar.`
+      updated + created > 0
+        ? `${created} criado(s), ${updated} atualizado(s) no Google Calendar.`
         : failed > 0
-          ? "Nenhum evento foi criado. Verifique a conexão com o Google Calendar."
-          : "Não há leads confirmados pendentes de sincronização.",
+          ? "Nenhum evento sincronizado. Verifique a conexão com o Google Calendar."
+          : "Não há leads confirmados para sincronizar.",
   });
 }

@@ -223,19 +223,26 @@ export function buildCalendarEventTitle(
   isPaid: boolean,
   isFinalized = false
 ): string {
-  const base = `🎉 ${eventType} — ${name}`;
+  const base = `${name} - ${eventType}`;
   const withPaid = isPaid ? `✅ QUITADO · ${base}` : base;
   return isFinalized ? `🏁 REALIZADO · ${withPaid}` : withPaid;
 }
 
 /** Extrai nome do cliente do título do Google Calendar */
 export function extractClientNameFromSummary(summary: string): string | null {
-  const s = summary
+  let s = summary
     .replace(/^✅ QUITADO · /, "")
     .replace(/^🏁 REALIZADO · /, "")
-    .replace(/^🎉 /, "");
-  const idx = s.lastIndexOf(" — ");
-  if (idx >= 0) return s.slice(idx + 3).trim();
+    .trim();
+
+  const newFormatIdx = s.indexOf(" - ");
+  if (newFormatIdx >= 0) {
+    return s.slice(0, newFormatIdx).trim() || null;
+  }
+
+  s = s.replace(/^🎉 /, "");
+  const legacyIdx = s.lastIndexOf(" — ");
+  if (legacyIdx >= 0) return s.slice(legacyIdx + 3).trim();
   return s.trim() || null;
 }
 
