@@ -25,14 +25,17 @@ import {
   formatDate,
   formatCurrencyInput,
   parseCurrencyBRL,
+  maskWhatsApp,
+  formatWhatsApp,
 } from "@/lib/utils";
 import { roundMoney, splitAmount } from "@/lib/payments";
 import { addHoursToTime, formatTimeRange } from "@/lib/event-time";
 import { formatSlotsLabel } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
+import { GuestCountField } from "@/components/orcamento/guest-count-field";
 import { LeadFinancial } from "@/components/leads/lead-financial";
-import type { Lead, StatusHistory } from "@/types/database";
+import { EVENT_TYPES, type Lead, type StatusHistory } from "@/types/database";
 import { toast } from "sonner";
 
 interface LeadModalProps {
@@ -75,13 +78,43 @@ export function LeadModal({
   const [firstDueDate, setFirstDueDate] = useState(defaultFirstDueDate);
   const [internalNotes, setInternalNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [savingInfo, setSavingInfo] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  const [displayLead, setDisplayLead] = useState<Lead | null>(null);
+  const [infoName, setInfoName] = useState("");
+  const [infoWhatsapp, setInfoWhatsapp] = useState("");
+  const [infoEventDate, setInfoEventDate] = useState("");
+  const [infoStartTime, setInfoStartTime] = useState("");
+  const [infoEndTime, setInfoEndTime] = useState("");
+  const [infoServiceType, setInfoServiceType] = useState("");
+  const [infoLocation, setInfoLocation] = useState("");
+  const [infoNeighborhood, setInfoNeighborhood] = useState("");
+  const [infoGuestCount, setInfoGuestCount] = useState(50);
+  const [infoEventType, setInfoEventType] = useState("");
+  const [infoObservations, setInfoObservations] = useState("");
+  const [infoInternalNotes, setInfoInternalNotes] = useState("");
+  const [catalogEventTypes, setCatalogEventTypes] = useState<{ id: string; name: string }[]>([]);
   const endTimeManualRef = useRef(false);
+  const infoEndTimeManualRef = useRef(false);
 
   useEffect(() => {
     if (!lead?.id) return;
+    setDisplayLead(lead);
     setActiveTab(initialTab);
     endTimeManualRef.current = false;
+    infoEndTimeManualRef.current = !!lead.event_end_time;
+    setInfoName(lead.name ?? "");
+    setInfoWhatsapp(maskWhatsApp(lead.whatsapp ?? ""));
+    setInfoEventDate(lead.event_date ?? "");
+    setInfoStartTime(lead.event_start_time?.slice(0, 5) ?? "");
+    setInfoEndTime(lead.event_end_time?.slice(0, 5) ?? "");
+    setInfoServiceType(lead.service_type ?? "");
+    setInfoLocation(lead.location ?? "");
+    setInfoNeighborhood(lead.neighborhood ?? "");
+    setInfoGuestCount(lead.guest_count ?? 50);
+    setInfoEventType(lead.event_type ?? "");
+    setInfoObservations(lead.observations ?? "");
+    setInfoInternalNotes(lead.internal_notes ?? "");
     setTotalValue(
       lead.total_value ? formatCurrencyInput(Number(lead.total_value)) : ""
     );
@@ -92,6 +125,10 @@ export function LeadModal({
     const savedEnd = lead.event_end_time?.slice(0, 5) ?? "";
     setEndTime(savedEnd);
     endTimeManualRef.current = !!savedEnd;
+    fetch("/api/catalog", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setCatalogEventTypes(d.event_types ?? []))
+      .catch(() => setCatalogEventTypes([]));
     fetch("/api/service-types")
       .then((r) => r.json())
       .then((d) => setServiceTypes(d.items ?? []))
@@ -103,13 +140,36 @@ export function LeadModal({
   }, [
     lead?.id,
     initialTab,
+    lead?.name,
+    lead?.whatsapp,
     lead?.total_value,
     lead?.internal_notes,
     lead?.event_date,
     lead?.event_start_time,
     lead?.event_end_time,
     lead?.service_type,
+    lead?.location,
+    lead?.neighborhood,
+    lead?.guest_count,
+    lead?.event_type,
+    lead?.observations,
   ]);
+
+  const eventTypeOptions =
+    catalogEventTypes.length > 0
+      ? catalogEventTypes.map((e) => e.name)
+      : [...EVENT_TYPES];
+
+  const infoSelectedService = useMemo(
+    () => serviceTypes.find((s) => s.name === infoServiceType),
+    [serviceTypes, infoServiceType]
+  );
+
+  useEffect(() => {
+    if (!infoSelectedService || !infoStartTime) return;
+    if (infoEndTimeManualRef.current) return;
+    setInfoEndTime(addHoursToTime(infoStartTime, infoSelectedService.duration_hours));
+  }, [infoSelectedService, infoStartTime]);
 
   const selectedService = useMemo(
     () => serviceTypes.find((s) => s.name === serviceType),
@@ -140,12 +200,79 @@ export function LeadModal({
     return { parcelCount, parcelValues, remaining: remainingPlan, entrada };
   }, [total, entrada, remainingPlan, paymentType, installments]);
 
-  if (!lead) return null;
+  if (!lead || !displayLead) return null;
 
   const clientWa = buildWhatsAppUrl(
-    lead.whatsapp,
-    `Olá ${lead.name}! Aqui é da Hora da Festa 🎉`
+    displayLead.whatsapp,
+    `Olá ${displayLead.name}! Aqui é da Hora da Festa 🎉`
   );
+
+  const handleSaveInfo = async () => {
+    if (!infoName.trim()) {
+      toast.error("Informe o nome do cliente");
+      return;
+    }
+    if (formatWhatsApp(infoWhatsapp).length < 10) {
+      toast.error("Informe um WhatsApp válido");
+      return;
+    }
+    if (!infoLocation.trim() || !infoNeighborhood.trim()) {
+      toast.error("Informe local e bairro");
+      return;
+    }
+
+    setSavingInfo(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: infoName.trim(),
+          whatsapp: formatWhatsApp(infoWhatsapp),
+          event_date: infoEventDate || null,
+          event_start_time: infoStartTime || null,
+          event_end_time: infoEndTime || null,
+          service_type: infoServiceType || null,
+          location: infoLocation.trim(),
+          neighborhood: infoNeighborhood.trim(),
+          guest_count: infoGuestCount,
+          event_type: infoEventType || null,
+          observations: infoObservations.trim() || null,
+          internal_notes: infoInternalNotes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao salvar");
+        return;
+      }
+
+      const {
+        googleCalendarSynced,
+        googleCalendarCreated,
+        googleCalendarError,
+        ...updatedLead
+      } = data;
+      setDisplayLead(updatedLead as Lead);
+      toast.success("Informações salvas");
+
+      if (googleCalendarSynced) {
+        toast.message(
+          googleCalendarCreated
+            ? "Evento criado no Google Calendar."
+            : "Google Calendar atualizado."
+        );
+      } else if (googleCalendarError) {
+        toast.warning(`Salvo, mas calendário não atualizou: ${googleCalendarError}`);
+      }
+
+      onUpdate();
+    } catch {
+      toast.error("Erro ao salvar");
+    } finally {
+      setSavingInfo(false);
+    }
+  };
 
   const handleConfirm = async () => {
     const amount = parseCurrencyBRL(totalValue);
@@ -213,12 +340,12 @@ export function LeadModal({
       <DialogContent side="right" className="overflow-y-auto">
         <div className="p-5 pt-14 pb-8 sm:p-6 sm:pt-14">
           <DialogTitle className="font-display text-2xl font-bold text-foreground">
-            {lead.name}
+            {displayLead.name}
           </DialogTitle>
           <p className="text-sm font-medium text-muted-foreground">
             Chegou em{" "}
-            {lead.arrived_at
-              ? formatDate(String(lead.arrived_at).slice(0, 10))
+            {displayLead.arrived_at
+              ? formatDate(String(displayLead.arrived_at).slice(0, 10))
               : "—"}
           </p>
 
@@ -230,41 +357,129 @@ export function LeadModal({
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
-              <dl className="space-y-4 text-sm">
-                {[
-                  ["WhatsApp", lead.whatsapp],
-                  [
-                    "Data",
-                    lead.event_date
-                      ? `${formatDate(lead.event_date)}${
-                          formatTimeRange(lead.event_start_time, lead.event_end_time)
-                            ? ` · ${formatTimeRange(lead.event_start_time, lead.event_end_time)}`
-                            : formatSlotsLabel(lead.slot_types, lead.slot_type)
-                              ? ` (${formatSlotsLabel(lead.slot_types, lead.slot_type)})`
-                              : ""
-                        }`
-                      : "—",
-                  ],
-                  ...(lead.service_type
-                    ? [["Serviço", lead.service_type] as [string, string]]
-                    : []),
-                  ["Local", `${lead.location} — ${lead.neighborhood}`],
-                  ["Convidados", `~${lead.guest_count}`],
-                  ["Tipo", lead.event_type],
-                  ...(lead.observations
-                    ? [["Observações", lead.observations] as [string, string]]
-                    : []),
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      {label}
-                    </dt>
-                    <dd className="mt-1 font-medium text-foreground">{value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <p className="text-sm text-muted-foreground">
+                Edite os dados e salve — o Google Calendar atualiza automaticamente
+                para eventos confirmados ou finalizados.
+              </p>
 
-              <Button asChild className="w-full">
+              <div className="space-y-3">
+                <div>
+                  <Label>Nome</Label>
+                  <Input value={infoName} onChange={(e) => setInfoName(e.target.value)} />
+                </div>
+                <div>
+                  <Label>WhatsApp</Label>
+                  <Input
+                    value={infoWhatsapp}
+                    onChange={(e) => setInfoWhatsapp(maskWhatsApp(e.target.value))}
+                    placeholder="(85) 99999-9999"
+                  />
+                </div>
+                <div>
+                  <Label>Data do evento</Label>
+                  <Input
+                    type="date"
+                    value={infoEventDate}
+                    onChange={(e) => setInfoEventDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Início</Label>
+                    <Input
+                      type="time"
+                      value={infoStartTime}
+                      onChange={(e) => setInfoStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Fim</Label>
+                    <Input
+                      type="time"
+                      value={infoEndTime}
+                      onChange={(e) => {
+                        infoEndTimeManualRef.current = true;
+                        setInfoEndTime(e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Serviço</Label>
+                  <Select
+                    value={infoServiceType || undefined}
+                    onValueChange={(v) => {
+                      infoEndTimeManualRef.current = false;
+                      setInfoServiceType(v);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serviceTypes.map((s) => (
+                        <SelectItem key={s.id} value={s.name}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Local</Label>
+                  <Input
+                    value={infoLocation}
+                    onChange={(e) => setInfoLocation(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Bairro</Label>
+                  <Input
+                    value={infoNeighborhood}
+                    onChange={(e) => setInfoNeighborhood(e.target.value)}
+                  />
+                </div>
+                <GuestCountField value={infoGuestCount} onChange={setInfoGuestCount} />
+                <div>
+                  <Label>Tipo de evento</Label>
+                  <Select value={infoEventType || undefined} onValueChange={setInfoEventType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventTypeOptions.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={infoObservations}
+                    onChange={(e) => setInfoObservations(e.target.value)}
+                    rows={4}
+                    placeholder="Detalhes do pedido, valores, itens..."
+                  />
+                </div>
+                <div>
+                  <Label>Notas internas</Label>
+                  <Textarea
+                    value={infoInternalNotes}
+                    onChange={(e) => setInfoInternalNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Anotações privadas da equipe..."
+                  />
+                </div>
+              </div>
+
+              <Button className="w-full" onClick={handleSaveInfo} disabled={savingInfo}>
+                {savingInfo ? "Salvando..." : "Salvar e atualizar calendário"}
+              </Button>
+
+              <Button asChild className="w-full" variant="outline">
                 <a href={clientWa} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="h-4 w-4" /> Abrir WhatsApp
                 </a>
@@ -289,21 +504,21 @@ export function LeadModal({
             </TabsContent>
 
             <TabsContent value="confirm" className="space-y-4">
-              {lead.status === "confirmado" ? (
+              {displayLead.status === "confirmado" ? (
                 <div className="space-y-3">
                   <p className="text-success font-medium">✅ Evento já confirmado</p>
-                  {lead.total_value != null && (
+                  {displayLead.total_value != null && (
                     <p className="text-sm font-medium text-foreground">
-                      Valor fechado: {formatCurrency(Number(lead.total_value))}
+                      Valor fechado: {formatCurrency(Number(displayLead.total_value))}
                     </p>
                   )}
-                  {formatTimeRange(lead.event_start_time, lead.event_end_time) ||
-                  formatSlotsLabel(lead.slot_types, lead.slot_type) ? (
+                  {formatTimeRange(displayLead.event_start_time, displayLead.event_end_time) ||
+                  formatSlotsLabel(displayLead.slot_types, displayLead.slot_type) ? (
                     <p className="text-sm text-muted-foreground">
-                      {lead.event_date ? formatDate(lead.event_date) : "—"} ·{" "}
-                      {formatTimeRange(lead.event_start_time, lead.event_end_time) ||
-                        formatSlotsLabel(lead.slot_types, lead.slot_type)}
-                      {lead.service_type && ` · ${lead.service_type}`}
+                      {displayLead.event_date ? formatDate(displayLead.event_date) : "—"} ·{" "}
+                      {formatTimeRange(displayLead.event_start_time, displayLead.event_end_time) ||
+                        formatSlotsLabel(displayLead.slot_types, displayLead.slot_type)}
+                      {displayLead.service_type && ` · ${displayLead.service_type}`}
                     </p>
                   ) : null}
                   <p className="text-sm text-muted-foreground">
@@ -516,7 +731,7 @@ export function LeadModal({
 
             <TabsContent value="finance">
               {activeTab === "finance" && (
-                <LeadFinancial key={lead.id} lead={lead} onUpdate={onUpdate} />
+                <LeadFinancial key={displayLead.id} lead={displayLead} onUpdate={onUpdate} />
               )}
             </TabsContent>
           </Tabs>

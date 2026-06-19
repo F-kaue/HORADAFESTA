@@ -159,6 +159,64 @@ export async function createGoogleCalendarEvent(
   return { eventId: event.id ?? null };
 }
 
+/** Atualiza título, descrição e horário de um evento existente */
+export async function updateGoogleCalendarEventDetails(
+  tokenData: Record<string, unknown>,
+  params: {
+    eventId: string;
+    calendarId?: string;
+    title: string;
+    description: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    colorId?: string;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const tokens = await refreshAccessToken(tokenData as GoogleTokens);
+  const calendarId = params.calendarId || "primary";
+  const start = params.startTime.slice(0, 5);
+  const end = params.endTime.slice(0, 5);
+
+  const res = await fetch(
+    `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: params.title,
+        description: params.description,
+        start: {
+          dateTime: `${params.date}T${start}:00`,
+          timeZone: "America/Fortaleza",
+        },
+        end: {
+          dateTime: `${params.date}T${end}:00`,
+          timeZone: "America/Fortaleza",
+        },
+        ...(params.colorId ? { colorId: params.colorId } : {}),
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    let error = `Google Calendar API ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) error = body.error.message;
+    } catch {
+      // ignore
+    }
+    console.error("[google-calendar] update event failed:", error);
+    return { ok: false, error };
+  }
+
+  return { ok: true };
+}
+
 export function buildCalendarEventTitle(
   eventType: string,
   name: string,

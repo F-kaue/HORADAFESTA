@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addHoursToTime } from "@/lib/event-time";
 import { formatTimeRange } from "@/lib/event-time";
-import { createGoogleCalendarEvent } from "@/lib/google-calendar";
+import {
+  buildCalendarEventTitle,
+  buildCalendarPaymentLine,
+  createGoogleCalendarEvent,
+  updateGoogleCalendarEventDetails,
+} from "@/lib/google-calendar";
+import { fetchPaymentBundle } from "@/lib/payment-server";
 import { getBusinessProfile } from "@/lib/business";
 import type { Lead } from "@/types/database";
 
@@ -62,6 +68,170 @@ export function resolveLeadSchedule(lead: Lead): {
   };
 }
 
+export function buildLeadCalendarDescription(
+  lead: Pick<
+    Lead,
+    | "name"
+    | "whatsapp"
+    | "location"
+    | "neighborhood"
+    | "guest_count"
+    | "event_type"
+    | "service_type"
+    | "observations"
+    | "internal_notes"
+    | "event_start_time"
+    | "event_end_time"
+  >
+): string {
+  const scheduleLabel = formatTimeRange(
+    lead.event_start_time,
+    lead.event_end_time
+  );
+
+  return [
+    `Cliente: ${lead.name}`,
+    `WhatsApp: ${lead.whatsapp}`,
+    `Local: ${lead.location} - ${lead.neighborhood}`,
+    `Convidados: ~${lead.guest_count}`,
+    `Tipo: ${lead.event_type}`,
+    lead.service_type ? `Serviço: ${lead.service_type}` : "",
+    scheduleLabel ? `Horário: ${scheduleLabel}` : "",
+    lead.observations ? `Obs: ${lead.observations}` : "",
+    lead.internal_notes ? `Notas: ${lead.internal_notes}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function syncLeadGoogleCalendarDetails(
+  supabase: SupabaseClient,
+  leadId: string,
+  userId?: string
+): Promise<{ synced: boolean; created: boolean; error?: string }> {
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("*")
+    .eq("id", leadId)
+    .single();
+
+  if (!lead) {
+    return { synced: false, created: false, error: "Lead não encontrado." };
+  }
+
+  const shouldSync =
+    !!lead.google_event_id ||
+    lead.status === "confirmado" ||
+    lead.status === "finalizado";
+
+  if (!shouldSync) {
+    return { synced: false, created: false };
+  }
+
+  const profile = await getCalendarProfile(supabase, userId);
+  if (!profile) {
+    return {
+      synced: false,
+      created: false,
+      error: "Google Calendar não conectado nesta conta.",
+    };
+  }
+
+  const schedule = resolveLeadSchedule(lead as Lead);
+  if (!schedule) {
+    return {
+      synced: false,
+      created: false,
+      error: "Informe a data do evento para sincronizar com o calendário.",
+    };
+  }
+
+  const bundle = await fetchPaymentBundle(supabase, leadId);
+  const isPaid =
+    bundle != null &&
+    bundle.summary.remaining <= 0.009 &&
+    bundle.summary.received > 0;
+  const isFinalized = lead.status === "finalizado";
+
+  let description = buildLeadCalendarDescription(lead as Lead);
+  if (bundle && bundle.summary.total > 0) {
+    description = [
+      description.replace(/\n💰 Pagamento:.*$/gm, "").trim(),
+      buildCalendarPaymentLine(
+        bundle.summary.received,
+        bundle.summary.total,
+        isPaid
+      ),
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (isFinalized) {
+    description = `${description}\nStatus: Evento realizado`.trim();
+  }
+
+  const title = buildCalendarEventTitle(
+    lead.event_type ?? "Evento",
+    lead.name,
+    isPaid,
+    isFinalized
+  );
+
+  let colorId = "10";
+  if (isFinalized) colorId = "8";
+  else if (isPaid) colorId = "2";
+
+  if (!lead.google_event_id) {
+    const created = await createGoogleCalendarEvent(profile.google_calendar_token, {
+      title,
+      description,
+      date: schedule.date,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      calendarId: profile.google_calendar_id ?? undefined,
+    });
+
+    if (!created.eventId) {
+      return {
+        synced: false,
+        created: false,
+        error: created.error ?? "Falha ao criar evento no Google Calendar.",
+      };
+    }
+
+    await supabase
+      .from("leads")
+      .update({ google_event_id: created.eventId })
+      .eq("id", leadId);
+
+    return { synced: true, created: true };
+  }
+
+  const updated = await updateGoogleCalendarEventDetails(
+    profile.google_calendar_token,
+    {
+      eventId: lead.google_event_id,
+      calendarId: profile.google_calendar_id ?? undefined,
+      title,
+      description,
+      date: schedule.date,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      colorId,
+    }
+  );
+
+  if (!updated.ok) {
+    return {
+      synced: false,
+      created: false,
+      error: updated.error ?? "Falha ao atualizar Google Calendar.",
+    };
+  }
+
+  return { synced: true, created: false };
+}
+
 export async function createCalendarEventForLead(
   supabase: SupabaseClient,
   userId: string,
@@ -88,20 +258,14 @@ export async function createCalendarEventForLead(
     };
   }
 
-  const scheduleLabel = formatTimeRange(schedule.startTime, schedule.endTime);
   const serviceLabel = extra?.serviceType ?? lead.service_type ?? lead.event_type;
 
   const description = [
-    `Cliente: ${lead.name}`,
-    `WhatsApp: ${lead.whatsapp}`,
-    `Local: ${lead.location} - ${lead.neighborhood}`,
-    `Convidados: ~${lead.guest_count}`,
-    `Tipo: ${lead.event_type}`,
-    serviceLabel ? `Serviço: ${serviceLabel}` : "",
-    `Horário: ${scheduleLabel}`,
-    lead.observations ? `Obs: ${lead.observations}` : "",
-    extra?.internalNotes ? `Notas: ${extra.internalNotes}` : "",
-    lead.internal_notes ? `Notas: ${lead.internal_notes}` : "",
+    buildLeadCalendarDescription({
+      ...lead,
+      service_type: serviceLabel,
+      internal_notes: extra?.internalNotes ?? lead.internal_notes,
+    }),
     extra?.downPayment && extra.downPayment > 0
       ? `Entrada: R$ ${extra.downPayment.toFixed(2)}`
       : "",
