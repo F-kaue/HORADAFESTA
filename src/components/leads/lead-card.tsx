@@ -101,7 +101,7 @@ export function LeadCard({
       )}
       onClick={() => onOpen(lead)}
     >
-      <div className="flex items-start gap-2 p-4 pb-2">
+      <div className="flex items-start gap-1.5 p-3 pb-1.5">
         <button
           type="button"
           className="mt-0.5 shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
@@ -113,7 +113,7 @@ export function LeadCard({
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="truncate text-base font-bold text-foreground">{lead.name}</p>
+            <p className="truncate text-sm font-bold text-foreground">{lead.name}</p>
             <div className="flex shrink-0 items-start gap-1">
               <div className="flex flex-col items-end gap-1">
                 <span
@@ -153,10 +153,10 @@ export function LeadCard({
         </div>
       </div>
 
-      <div className="space-y-2 px-4 pb-3 text-sm font-medium text-foreground/85">
+      <div className="space-y-1.5 px-3 pb-2 text-xs font-medium text-foreground/85">
         {lead.event_date && (
-          <p className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 shrink-0 text-primary" />
+          <p className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span>
               {formatDate(lead.event_date)}
               {(formatTimeRange(lead.event_start_time, lead.event_end_time) ||
@@ -172,13 +172,13 @@ export function LeadCard({
           </p>
         )}
         {lead.guest_count != null && lead.guest_count > 0 && (
-          <p className="flex items-center gap-2">
-            <Users className="h-4 w-4 shrink-0 text-primary" />~{lead.guest_count} pessoas
+          <p className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 shrink-0 text-primary" />~{lead.guest_count} pessoas
           </p>
         )}
         {lead.neighborhood && (
-          <p className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0 text-primary" />
+          <p className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
             {lead.neighborhood}
           </p>
         )}
@@ -188,18 +188,18 @@ export function LeadCard({
       </div>
 
       <div
-        className="flex gap-2 border-t border-border/60 bg-muted/30 p-3"
+        className="flex gap-1.5 border-t border-border/60 bg-muted/30 p-2"
         onClick={(e) => e.stopPropagation()}
       >
         <Button
           variant="outline"
           size="sm"
-          className="h-10 flex-1 border-2 font-semibold"
+          className="h-8 flex-1 border-2 text-xs font-semibold"
           onClick={() => onOpen(lead)}
         >
           Ver detalhes
         </Button>
-        <Button variant="secondary" size="sm" className="h-10 w-10 shrink-0 p-0" asChild>
+        <Button variant="secondary" size="sm" className="h-8 w-8 shrink-0 p-0" asChild>
           <a href={clientWa} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
             <MessageCircle className="h-4 w-4" />
           </a>

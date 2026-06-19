@@ -123,18 +123,18 @@ function KanbanColumn({
   const highlighted = isOver || dropOver;
 
   return (
-    <div className="flex w-[min(340px,88vw)] shrink-0 flex-col sm:w-[340px]">
+    <div className="flex w-[min(320px,88vw)] shrink-0 flex-col sm:w-[320px]">
       <div
         className={cn(
-          "mb-3 flex items-center gap-2.5 rounded-xl px-4 py-3",
+          "mb-2 flex items-center gap-2 rounded-lg px-3 py-2",
           styles.header
         )}
       >
-        <span className="text-lg leading-none" aria-hidden>
+        <span className="text-base leading-none" aria-hidden>
           {config.emoji}
         </span>
         <span className="text-sm font-bold tracking-tight">{config.label}</span>
-        <span className="ml-auto flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-white/25 px-2 text-xs font-bold">
+        <span className="ml-auto flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-white/25 px-1.5 text-2xs font-bold">
           {leads.length}
         </span>
       </div>
@@ -144,7 +144,7 @@ function KanbanColumn({
           ref={setNodeRef}
           data-status={status}
           className={cn(
-            "flex min-h-[200px] flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
+            "flex min-h-[160px] flex-col gap-2 rounded-xl p-2 transition-all duration-200",
             styles.body,
             highlighted && "border-primary bg-primary/5 ring-2 ring-primary/30 dark:bg-primary/15"
           )}
@@ -152,11 +152,11 @@ function KanbanColumn({
           {leads.length === 0 ? (
             <div
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-2 rounded-xl px-4 py-10 text-center",
+                "flex flex-1 flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-8 text-center",
                 highlighted ? "opacity-100" : "opacity-70"
               )}
             >
-              <Inbox className={cn("h-8 w-8", styles.emptyIcon)} strokeWidth={1.5} />
+              <Inbox className={cn("h-7 w-7", styles.emptyIcon)} strokeWidth={1.5} />
               <p className={cn("text-sm font-bold", styles.emptyTitle)}>
                 {highlighted ? "Solte o card aqui" : "Nenhum lead"}
               </p>
@@ -551,9 +551,9 @@ export function KanbanBoard({ className }: { className?: string }) {
   const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex shrink-0 flex-col gap-3 rounded-2xl border-2 border-border bg-card p-3 shadow-card sm:p-4">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+    <div className={cn("space-y-2", className)}>
+      <div className="flex shrink-0 flex-col gap-2 rounded-xl border-2 border-border bg-card p-2 shadow-card sm:p-3">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
           <div className="relative min-w-0 flex-1 xl:max-w-xs">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -721,37 +721,10 @@ export function KanbanBoard({ className }: { className?: string }) {
         }}
       >
         <div className="relative hidden lg:block">
-          <div className="kanban-scroll-sticky sticky top-[4.25rem] z-20 -mx-1 mb-3 px-1 pb-2 pt-1">
-            <div className="mb-2 flex items-center gap-2">
-              <p className="mr-auto hidden text-xs font-medium text-muted-foreground xl:block">
-                Barra fixa no topo ao rolar — use as setas ou arraste a barra laranja
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 border-2"
-                disabled={!canScrollLeft}
-                onClick={() => scrollBoard("left")}
-                aria-label="Colunas anteriores"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 border-2"
-                disabled={!canScrollRight}
-                onClick={() => scrollBoard("right")}
-                aria-label="Próximas colunas"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="kanban-scroll-sticky sticky top-[4.25rem] z-20 -mx-1 mb-2 flex items-center gap-2 px-1 pb-1 pt-1">
             <div
               ref={topScrollRef}
-              className="kanban-h-scroll kanban-h-scroll-top"
+              className="kanban-h-scroll kanban-h-scroll-top min-w-0 flex-1"
               aria-label="Rolagem horizontal do kanban"
             >
               <div
@@ -760,10 +733,32 @@ export function KanbanBoard({ className }: { className?: string }) {
                 aria-hidden
               />
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 shrink-0 border-2"
+              disabled={!canScrollLeft}
+              onClick={() => scrollBoard("left")}
+              aria-label="Colunas anteriores"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 shrink-0 border-2"
+              disabled={!canScrollRight}
+              onClick={() => scrollBoard("right")}
+              aria-label="Próximas colunas"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
           <div
             ref={boardScrollRef}
-            className="kanban-h-scroll-content flex gap-4 pb-2 pt-1"
+            className="kanban-h-scroll-content flex gap-3 pb-1"
           >
             {visibleColumns.map((status) => (
               <KanbanColumn
