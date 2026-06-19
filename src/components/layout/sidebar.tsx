@@ -20,23 +20,25 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [businessName, setBusinessName] = useState<string>();
+  const [cnpj, setCnpj] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
     supabase
       .from("profiles")
-      .select("business_name")
+      .select("business_name, cnpj")
       .single()
       .then(({ data }) => {
         if (!data) return;
         setBusinessName(data.business_name ?? undefined);
+        setCnpj(data.cnpj ?? null);
       });
   }, []);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/80 bg-card lg:flex">
-      <div className="flex min-h-[5.5rem] items-center justify-center border-b border-border/80 px-4 py-4">
-        <BrandLogo size="sidebar" showText={false} businessName={businessName} />
+      <div className="flex min-h-[4.25rem] items-center border-b border-border/80 px-5 py-3">
+        <BrandLogo size="sidebar" businessName={businessName} cnpj={cnpj} />
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {

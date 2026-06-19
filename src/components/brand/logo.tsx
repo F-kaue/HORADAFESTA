@@ -14,7 +14,7 @@ const sizes = {
   md: { img: 40, text: "text-sm" },
   lg: { img: 56, text: "text-base" },
   xl: { img: 72, text: "text-lg" },
-  sidebar: { img: 80, text: "text-base" },
+  sidebar: { img: 48, text: "text-sm" },
 };
 
 export function BrandLogo({
@@ -29,12 +29,7 @@ export function BrandLogo({
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div
-        className={cn(
-          "relative shrink-0 overflow-hidden rounded-full bg-card shadow-sm ring-1 ring-border/60",
-          size === "sidebar" && "p-1"
-        )}
-      >
+      <div className="relative shrink-0 overflow-hidden rounded-xl bg-card ring-1 ring-border/60">
         <Image
           src="/logo.png"
           alt={title}
