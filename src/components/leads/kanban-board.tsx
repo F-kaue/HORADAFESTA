@@ -123,10 +123,10 @@ function KanbanColumn({
   const highlighted = isOver || dropOver;
 
   return (
-    <div className="flex h-full w-[min(340px,88vw)] shrink-0 flex-col sm:w-[340px]">
+    <div className="flex w-[min(340px,88vw)] shrink-0 flex-col sm:w-[340px]">
       <div
         className={cn(
-          "mb-3 flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-3",
+          "mb-3 flex items-center gap-2.5 rounded-xl px-4 py-3",
           styles.header
         )}
       >
@@ -144,7 +144,7 @@ function KanbanColumn({
           ref={setNodeRef}
           data-status={status}
           className={cn(
-            "kanban-col-scroll flex min-h-[120px] flex-1 flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
+            "flex min-h-[200px] flex-col gap-3 rounded-2xl p-3 transition-all duration-200",
             styles.body,
             highlighted && "border-primary bg-primary/5 ring-2 ring-primary/30 dark:bg-primary/15"
           )}
@@ -519,7 +519,7 @@ export function KanbanBoard({ className }: { className?: string }) {
   const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-3", className)}>
+    <div className={cn("space-y-3", className)}>
       <div className="flex shrink-0 flex-col gap-3 rounded-2xl border-2 border-border bg-card p-3 shadow-card sm:p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <div className="relative min-w-0 flex-1 xl:max-w-xs">
@@ -688,8 +688,8 @@ export function KanbanBoard({ className }: { className?: string }) {
           setOverColumnId(null);
         }}
       >
-        <div className="relative hidden min-h-0 flex-1 flex-col lg:flex">
-          <div className="mb-2 flex shrink-0 items-center gap-2">
+        <div className="relative hidden lg:block">
+          <div className="mb-2 flex items-center gap-2">
             <p className="mr-auto hidden text-xs font-medium text-muted-foreground xl:block">
               Role horizontalmente na barra abaixo ou use as setas para ver mais colunas
             </p>
@@ -718,7 +718,7 @@ export function KanbanBoard({ className }: { className?: string }) {
           </div>
           <div
             ref={boardScrollRef}
-            className="kanban-h-scroll flex min-h-0 flex-1 gap-4 pb-1 pt-0.5"
+            className="kanban-h-scroll flex gap-4 pb-2 pt-1"
           >
             {visibleColumns.map((status) => (
               <KanbanColumn
