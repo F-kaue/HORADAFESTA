@@ -2,7 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface BrandLogoProps {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "sidebar";
   showText?: boolean;
   businessName?: string;
   cnpj?: string | null;
@@ -14,6 +14,7 @@ const sizes = {
   md: { img: 40, text: "text-sm" },
   lg: { img: 56, text: "text-base" },
   xl: { img: 72, text: "text-lg" },
+  sidebar: { img: 80, text: "text-base" },
 };
 
 export function BrandLogo({
@@ -28,7 +29,12 @@ export function BrandLogo({
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="relative shrink-0 overflow-hidden rounded-xl bg-card ring-1 ring-border/60">
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-full bg-card shadow-sm ring-1 ring-border/60",
+          size === "sidebar" && "p-1"
+        )}
+      >
         <Image
           src="/logo.png"
           alt={title}
