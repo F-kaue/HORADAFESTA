@@ -27,6 +27,7 @@ export type ReceivablesSummary = {
   heldTotal: number;
   availableTotal: number;
   rows: ReceivableLeadRow[];
+  eventTypes?: string[];
 };
 
 /** Saldo só vira receita disponível quando liberado manualmente ou evento finalizado */

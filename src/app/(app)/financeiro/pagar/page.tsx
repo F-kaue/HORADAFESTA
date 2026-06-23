@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, CheckCircle2, AlertCircle, Clock, Wallet, Pencil } from "lucide-react";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
+import { FinanceListFilters } from "@/components/finance/finance-list-filters";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { PayableEditDialog } from "@/components/finance/payable-edit-dialog";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
+import { matchesSearch } from "@/lib/search-text";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +52,8 @@ export default function ContasAPagarPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [holderFilter, setHolderFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [holders, setHolders] = useState<string[]>([]);
 
   const [description, setDescription] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -77,6 +81,7 @@ export default function ContasAPagarPage() {
     const res = await fetch(`/api/accounts-payable?${params}`, { cache: "no-store" });
     const json = await res.json();
     setItems(json.items ?? []);
+    setHolders(json.holders ?? []);
     setLoading(false);
   }, [from, to, statusFilter, categoryFilter, holderFilter, methodFilter]);
 
@@ -84,10 +89,39 @@ export default function ContasAPagarPage() {
     load();
   }, [load]);
 
+  const clearFilters = () => {
+    setFrom("");
+    setTo("");
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setHolderFilter("all");
+    setMethodFilter("all");
+    setSearch("");
+  };
+
+  const hasActiveFilters =
+    Boolean(from || to || search.trim()) ||
+    statusFilter !== "all" ||
+    categoryFilter !== "all" ||
+    holderFilter !== "all" ||
+    methodFilter !== "all";
+
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return items;
+    return items.filter((item) =>
+      matchesSearch(
+        search,
+        item.description,
+        item.supplier ?? undefined,
+        item.category,
+        item.holder ?? undefined,
+        item.payment_method ?? undefined,
+        item.notes ?? undefined
+      )
+    );
+  }, [items, search]);
+
   const summary = summarizePayables(items);
-  const holders = Array.from(
-    new Set(items.map((i) => i.holder).filter(Boolean))
-  ) as string[];
 
   const resetForm = () => {
     setDescription("");
@@ -169,7 +203,7 @@ export default function ContasAPagarPage() {
     }
   };
 
-  const exportRows = items.map((i) => ({
+  const exportRows = filteredItems.map((i) => ({
     descricao: i.description,
     fornecedor: i.supplier ?? "—",
     categoria: i.category,
@@ -206,6 +240,7 @@ export default function ContasAPagarPage() {
     ...(categoryFilter !== "all" ? [{ label: "Categoria", value: categoryFilter }] : []),
     ...(holderFilter !== "all" ? [{ label: "Portador", value: holderFilter }] : []),
     ...(methodFilter !== "all" ? [{ label: "Forma", value: methodFilter }] : []),
+    ...(search.trim() ? [{ label: "Busca", value: search.trim() }] : []),
   ];
 
   const today = new Date().toISOString().slice(0, 10);
@@ -218,7 +253,7 @@ export default function ContasAPagarPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <ReportToolbar
-              disabled={!items.length}
+              disabled={!filteredItems.length}
               onExportExcel={() => exportToExcel("contas-a-pagar", columns, exportRows)}
               onExportPdf={() =>
                 exportToPdf({
@@ -366,7 +401,14 @@ export default function ContasAPagarPage() {
         </FinancePanel>
       )}
 
-      <FinancePanel title="Filtros" description="Refine a lista de despesas">
+      <FinanceListFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por descrição, fornecedor ou portador..."
+        onClear={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+        description="Busque despesas e refine por vencimento, status e categoria"
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <Label>Vencimento — de</Label>
@@ -438,19 +480,28 @@ export default function ContasAPagarPage() {
             </Select>
           </div>
         </div>
-      </FinancePanel>
+      </FinanceListFilters>
 
       <FinancePanel title="Despesas" description="Todas as contas cadastradas">
         <div className="space-y-3">
           {loading && (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           )}
-          {!loading && items.length === 0 && (
-            <p className="py-8 text-center text-muted-foreground">
-              Nenhuma despesa encontrada.
-            </p>
+          {!loading && filteredItems.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <p className="text-muted-foreground">
+                {hasActiveFilters
+                  ? "Nenhuma despesa encontrada com estes filtros."
+                  : "Nenhuma despesa cadastrada."}
+              </p>
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={clearFilters}>
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
           )}
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const overdue =
               item.status === "pendente" && item.due_date < today;
             return (

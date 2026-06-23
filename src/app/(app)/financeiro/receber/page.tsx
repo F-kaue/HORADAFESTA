@@ -31,6 +31,7 @@ import {
   type ReceivablesSummary,
 } from "@/lib/receivables";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
+import { FinanceListFilters } from "@/components/finance/finance-list-filters";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ManualReceivableDialog } from "@/components/finance/manual-receivable-dialog";
 import { ReceivableDetailPanel } from "@/components/finance/receivable-detail-panel";
@@ -38,6 +39,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
+import { matchesSearch } from "@/lib/search-text";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -54,6 +56,8 @@ export default function ContasAReceberPage() {
   const [to, setTo] = useState("");
   const [bucket, setBucket] = useState<ReceivableBucket | "all">("all");
   const [eventType, setEventType] = useState("all");
+  const [search, setSearch] = useState("");
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [releasingId, setReleasingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [selected, setSelected] = useState<ReceivableLeadRow | null>(null);
@@ -72,6 +76,7 @@ export default function ContasAReceberPage() {
     });
     const json = await res.json();
     setData(json);
+    setEventTypes(json.eventTypes ?? []);
     setSelected((prev) => {
       if (!prev) return null;
       return (
@@ -87,10 +92,24 @@ export default function ContasAReceberPage() {
     load();
   }, [load]);
 
-  const eventTypes = useMemo(() => {
-    const set = new Set((data?.rows ?? []).map((r) => r.eventType).filter(Boolean));
-    return Array.from(set) as string[];
-  }, [data]);
+  const clearFilters = () => {
+    setFrom("");
+    setTo("");
+    setBucket("all");
+    setEventType("all");
+    setSearch("");
+  };
+
+  const hasActiveFilters =
+    Boolean(from || to || search.trim()) || bucket !== "all" || eventType !== "all";
+
+  const filteredRows = useMemo(() => {
+    const rows = data?.rows ?? [];
+    if (!search.trim()) return rows;
+    return rows.filter((r) =>
+      matchesSearch(search, r.clientName, r.eventType ?? undefined)
+    );
+  }, [data?.rows, search]);
 
   const openDetail = (r: ReceivableLeadRow) => setSelected(r);
 
@@ -143,7 +162,7 @@ export default function ContasAReceberPage() {
   const askDeleteManual = (id: string, clientName: string) =>
     setPageConfirm({ kind: "delete", id, clientName });
 
-  const exportRows = (data?.rows ?? []).map((r) => ({
+  const exportRows = filteredRows.map((r) => ({
     origem: r.source === "manual" ? "Manual" : "Evento CRM",
     cliente: r.clientName,
     data: r.eventDate ? formatDate(r.eventDate) : "—",
@@ -196,6 +215,7 @@ export default function ContasAReceberPage() {
       ? [{ label: "Situação", value: RECEIVABLE_BUCKET_LABELS[bucket].label }]
       : []),
     ...(eventType !== "all" ? [{ label: "Tipo", value: eventType }] : []),
+    ...(search.trim() ? [{ label: "Busca", value: search.trim() }] : []),
   ];
 
   return (
@@ -206,7 +226,7 @@ export default function ContasAReceberPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <ReportToolbar
-              disabled={!data?.rows.length}
+              disabled={!filteredRows.length}
               onExportExcel={() =>
                 exportToExcel("contas-a-receber", columns, exportRows)
               }
@@ -274,7 +294,14 @@ export default function ContasAReceberPage() {
         />
       </div>
 
-      <FinancePanel title="Filtros" description="Refine a lista de recebíveis">
+      <FinanceListFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por cliente ou tipo de evento..."
+        onClear={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+        description="Busque por cliente e refine a lista de recebíveis"
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label>Data evento — de</Label>
@@ -318,7 +345,7 @@ export default function ContasAReceberPage() {
             </Select>
           </div>
         </div>
-      </FinancePanel>
+      </FinanceListFilters>
 
       <FinancePanel
         title="Recebíveis"
@@ -328,19 +355,29 @@ export default function ContasAReceberPage() {
           <div className="flex items-center justify-center py-16 text-muted-foreground">
             Carregando recebíveis...
           </div>
-        ) : (data?.rows ?? []).length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <ArrowDownCircle className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">Nenhum recebível com estes filtros.</p>
-            <Button variant="outline" onClick={() => setShowManual(true)}>
-              Cadastrar recebível manual
-            </Button>
+            <p className="text-muted-foreground">
+              {hasActiveFilters
+                ? "Nenhum recebível encontrado com estes filtros."
+                : "Nenhum recebível cadastrado."}
+            </p>
+            {hasActiveFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                Limpar filtros
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setShowManual(true)}>
+                Cadastrar recebível manual
+              </Button>
+            )}
           </div>
         ) : (
           <>
             {/* Mobile cards */}
             <div className="space-y-3 lg:hidden">
-              {(data?.rows ?? []).map((r) => (
+              {filteredRows.map((r) => (
                 <article
                   key={`${r.source}-${r.leadId}`}
                   role="button"
@@ -453,7 +490,7 @@ export default function ContasAReceberPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data?.rows ?? []).map((r) => (
+                  {filteredRows.map((r) => (
                     <tr
                       key={`${r.source}-${r.leadId}`}
                       className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/30"

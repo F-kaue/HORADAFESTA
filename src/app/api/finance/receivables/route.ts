@@ -101,7 +101,12 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  let rows = [...leadRows, ...manualReceivableRows];
+  const allRows = [...leadRows, ...manualReceivableRows];
+  const eventTypes = Array.from(
+    new Set(allRows.map((r) => r.eventType).filter(Boolean))
+  ).sort() as string[];
+
+  let rows = allRows;
 
   if (from) rows = rows.filter((r) => r.eventDate && r.eventDate >= from);
   if (to) rows = rows.filter((r) => r.eventDate && r.eventDate <= to);
@@ -115,5 +120,8 @@ export async function GET(request: NextRequest) {
     return da.localeCompare(db);
   });
 
-  return NextResponse.json(buildReceivablesSummary(rows));
+  return NextResponse.json({
+    ...buildReceivablesSummary(rows),
+    eventTypes,
+  });
 }

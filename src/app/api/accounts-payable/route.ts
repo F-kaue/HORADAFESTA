@@ -44,8 +44,22 @@ export async function GET(request: NextRequest) {
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const { data: holderRows } = await supabase
+    .from("accounts_payable")
+    .select("holder")
+    .not("holder", "is", null);
+
+  const holders = Array.from(
+    new Set(
+      (holderRows ?? [])
+        .map((r) => r.holder as string)
+        .filter((h) => h.trim().length > 0)
+    )
+  ).sort();
+
   return NextResponse.json({
     items: (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })),
+    holders,
   });
 }
 
