@@ -14,7 +14,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,6 +31,9 @@ import {
 } from "@/lib/receivables";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
 import { FinanceListFilters } from "@/components/finance/finance-list-filters";
+import { FinancePeriodSelector } from "@/components/finance/finance-period-selector";
+import { ClientProfitPanel } from "@/components/finance/client-profit-panel";
+import { useFinancePeriod } from "@/components/finance/use-finance-period";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ManualReceivableDialog } from "@/components/finance/manual-receivable-dialog";
 import { ReceivableDetailPanel } from "@/components/finance/receivable-detail-panel";
@@ -40,6 +42,8 @@ import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { matchesSearch } from "@/lib/search-text";
+import { formatPeriodLabel, getDefaultPeriodRange } from "@/lib/finance-period";
+import { buildClientProfitRows } from "@/lib/client-profit";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -50,10 +54,9 @@ type PageConfirm =
 
 export default function ContasAReceberPage() {
   const branding = useReportBranding();
+  const { mode, range, setMode, setRange } = useFinancePeriod("week");
   const [data, setData] = useState<ReceivablesSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
   const [bucket, setBucket] = useState<ReceivableBucket | "all">("all");
   const [eventType, setEventType] = useState("all");
   const [search, setSearch] = useState("");
@@ -67,8 +70,8 @@ export default function ContasAReceberPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
+    params.set("from", range.from);
+    params.set("to", range.to);
     if (bucket !== "all") params.set("bucket", bucket);
     if (eventType !== "all") params.set("event_type", eventType);
     const res = await fetch(`/api/finance/receivables?${params}`, {
@@ -86,22 +89,27 @@ export default function ContasAReceberPage() {
       );
     });
     setLoading(false);
-  }, [from, to, bucket, eventType]);
+  }, [range.from, range.to, bucket, eventType]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const clearFilters = () => {
-    setFrom("");
-    setTo("");
+    setRange(getDefaultPeriodRange(mode));
     setBucket("all");
     setEventType("all");
     setSearch("");
   };
 
   const hasActiveFilters =
-    Boolean(from || to || search.trim()) || bucket !== "all" || eventType !== "all";
+    Boolean(search.trim()) ||
+    bucket !== "all" ||
+    eventType !== "all" ||
+    range.from !== getDefaultPeriodRange(mode).from ||
+    range.to !== getDefaultPeriodRange(mode).to;
+
+  const periodLabel = formatPeriodLabel(range, mode);
 
   const filteredRows = useMemo(() => {
     const rows = data?.rows ?? [];
@@ -162,10 +170,34 @@ export default function ContasAReceberPage() {
   const askDeleteManual = (id: string, clientName: string) =>
     setPageConfirm({ kind: "delete", id, clientName });
 
+  const clientProfitRows = useMemo(
+    () =>
+      buildClientProfitRows(
+        filteredRows
+          .filter((r) => (r.receivedInPeriod ?? 0) > 0)
+          .map((r) => ({
+            leadId: r.source === "lead" ? r.leadId : null,
+            clientName: r.clientName,
+            amount: r.receivedInPeriod ?? 0,
+          })),
+        filteredRows
+          .filter((r) => (r.expensesInPeriod ?? 0) > 0 && r.source === "lead")
+          .map((r) => ({
+            leadId: r.leadId,
+            clientName: r.clientName,
+            amount: r.expensesInPeriod ?? 0,
+          }))
+      ),
+    [filteredRows]
+  );
+
   const exportRows = filteredRows.map((r) => ({
     origem: r.source === "manual" ? "Manual" : "Evento CRM",
     cliente: r.clientName,
     data: r.eventDate ? formatDate(r.eventDate) : "—",
+    recebidoPeriodo: r.receivedInPeriod ?? 0,
+    despesasPeriodo: r.expensesInPeriod ?? 0,
+    resultadoPeriodo: r.profitInPeriod ?? 0,
     tipo: r.eventType ?? "—",
     contrato: r.contractTotal,
     recebido: r.received,
@@ -179,6 +211,21 @@ export default function ContasAReceberPage() {
     { key: "origem", header: "Origem" },
     { key: "cliente", header: "Cliente" },
     { key: "data", header: "Data evento" },
+    {
+      key: "recebidoPeriodo",
+      header: "Recebido no período",
+      format: (r: { recebidoPeriodo: number }) => formatCurrency(r.recebidoPeriodo),
+    },
+    {
+      key: "despesasPeriodo",
+      header: "Despesas no período",
+      format: (r: { despesasPeriodo: number }) => formatCurrency(r.despesasPeriodo),
+    },
+    {
+      key: "resultadoPeriodo",
+      header: "Resultado",
+      format: (r: { resultadoPeriodo: number }) => formatCurrency(r.resultadoPeriodo),
+    },
     { key: "tipo", header: "Tipo" },
     {
       key: "contrato",
@@ -209,8 +256,9 @@ export default function ContasAReceberPage() {
   ];
 
   const filterMeta = [
-    ...(from ? [{ label: "De", value: formatDate(from) }] : []),
-    ...(to ? [{ label: "Até", value: formatDate(to) }] : []),
+    { label: "Período", value: periodLabel },
+    { label: "De", value: formatDate(range.from) },
+    { label: "Até", value: formatDate(range.to) },
     ...(bucket !== "all"
       ? [{ label: "Situação", value: RECEIVABLE_BUCKET_LABELS[bucket].label }]
       : []),
@@ -273,24 +321,41 @@ export default function ContasAReceberPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <FinancePeriodSelector
+        mode={mode}
+        range={range}
+        onModeChange={setMode}
+        onRangeChange={setRange}
+      />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <FinanceStatCard
-          label="A receber"
-          value={formatCurrency(data?.pendingTotal ?? 0)}
-          icon={Clock}
-          tone="amber"
+          label="Saldo disponível"
+          value={formatCurrency(data?.netAvailableBalance ?? 0)}
+          icon={Wallet}
+          tone="emerald"
+          hint="Receita liberada menos despesas pagas"
+        />
+        <FinanceStatCard
+          label="Recebido no período"
+          value={formatCurrency(data?.receivedInPeriodTotal ?? 0)}
+          icon={ArrowDownCircle}
+          tone="emerald"
+          hint={periodLabel}
         />
         <FinanceStatCard
           label="Recebido retido"
           value={formatCurrency(data?.heldTotal ?? 0)}
           icon={Banknote}
           tone="sky"
+          hint="Não é afetado por despesas"
         />
         <FinanceStatCard
-          label="Receita disponível"
-          value={formatCurrency(data?.availableTotal ?? 0)}
-          icon={Wallet}
-          tone="emerald"
+          label="Resultado do período"
+          value={formatCurrency(data?.profitInPeriodTotal ?? 0)}
+          icon={Clock}
+          tone={(data?.profitInPeriodTotal ?? 0) >= 0 ? "emerald" : "rose"}
+          hint="Recebido menos despesas vinculadas"
         />
       </div>
 
@@ -300,17 +365,9 @@ export default function ContasAReceberPage() {
         searchPlaceholder="Buscar por cliente ou tipo de evento..."
         onClear={clearFilters}
         hasActiveFilters={hasActiveFilters}
-        description="Busque por cliente e refine a lista de recebíveis"
+        description="Busque por cliente e refine a lista do período selecionado"
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label>Data evento — de</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Data evento — até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Situação</Label>
             <Select
@@ -346,6 +403,12 @@ export default function ContasAReceberPage() {
           </div>
         </div>
       </FinanceListFilters>
+
+      <ClientProfitPanel
+        rows={clientProfitRows}
+        periodLabel={periodLabel}
+        loading={loading}
+      />
 
       <FinancePanel
         title="Recebíveis"
@@ -480,6 +543,9 @@ export default function ContasAReceberPage() {
                     <th className="pb-3 pr-3">Cliente</th>
                     <th className="pb-3 pr-3">Origem</th>
                     <th className="pb-3 pr-3">Data</th>
+                    <th className="pb-3 pr-3 text-right">Recebido período</th>
+                    <th className="pb-3 pr-3 text-right">Despesas</th>
+                    <th className="pb-3 pr-3 text-right">Resultado</th>
                     <th className="pb-3 pr-3 text-right">Contrato</th>
                     <th className="pb-3 pr-3 text-right">Recebido</th>
                     <th className="pb-3 pr-3 text-right">A receber</th>
@@ -511,6 +577,20 @@ export default function ContasAReceberPage() {
                       </td>
                       <td className="py-3.5 pr-3 text-muted-foreground">
                         {r.eventDate ? formatDate(r.eventDate) : "—"}
+                      </td>
+                      <td className="py-3.5 pr-3 text-right tabular-nums text-emerald-700">
+                        {formatCurrency(r.receivedInPeriod ?? 0)}
+                      </td>
+                      <td className="py-3.5 pr-3 text-right tabular-nums text-rose-700">
+                        {formatCurrency(r.expensesInPeriod ?? 0)}
+                      </td>
+                      <td
+                        className={cn(
+                          "py-3.5 pr-3 text-right tabular-nums font-semibold",
+                          (r.profitInPeriod ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"
+                        )}
+                      >
+                        {formatCurrency(r.profitInPeriod ?? 0)}
                       </td>
                       <td className="py-3.5 pr-3 text-right tabular-nums">
                         {formatCurrency(r.contractTotal)}

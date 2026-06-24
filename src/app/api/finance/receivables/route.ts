@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isDateInRange } from "@/lib/finance-period";
 import { getTotalReceived } from "@/lib/payments";
 import {
   buildReceivablesSummary,
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
   const to = searchParams.get("to");
   const eventType = searchParams.get("event_type");
   const status = searchParams.get("status");
+  const periodFrom = from;
+  const periodTo = to;
 
   const { data: leads } = await supabase
     .from("leads")
@@ -59,6 +62,29 @@ export async function GET(request: NextRequest) {
     receivedByPayment.set(p.id, getTotalReceived(pTxs));
   }
 
+  const { data: payablesRaw } = await supabase
+    .from("accounts_payable")
+    .select("lead_id, amount, paid_date, status")
+    .neq("status", "cancelado");
+
+  const expensesByLead = new Map<string, number>();
+  const totalPaidPayables = (payablesRaw ?? [])
+    .filter((p) => p.status === "pago")
+    .reduce((s, p) => s + Number(p.amount), 0);
+
+  if (periodFrom && periodTo) {
+    for (const p of payablesRaw ?? []) {
+      if (p.status !== "pago" || !p.paid_date || !p.lead_id) continue;
+      if (!isDateInRange(p.paid_date as string, { from: periodFrom, to: periodTo })) {
+        continue;
+      }
+      expensesByLead.set(
+        p.lead_id as string,
+        (expensesByLead.get(p.lead_id as string) ?? 0) + Number(p.amount)
+      );
+    }
+  }
+
   const leadRows = (leads ?? []).map((lead) => {
     const payment = paymentByLead.get(lead.id);
     const contractTotal = payment
@@ -68,17 +94,36 @@ export async function GET(request: NextRequest) {
       ? receivedByPayment.get(payment.id) ?? 0
       : 0;
 
-    return classifyReceivableRow({
-      leadId: lead.id,
-      source: "lead",
-      clientName: lead.name,
-      eventDate: lead.event_date,
-      eventType: lead.event_type,
-      status: lead.status,
-      contractTotal,
-      received,
-      revenueRecognizedAt: lead.revenue_recognized_at,
-    });
+    const paymentTxs = payment
+      ? txs.filter((t) => t.payment_id === payment.id)
+      : [];
+    const receivedInPeriod =
+      periodFrom && periodTo
+        ? paymentTxs
+            .filter((t) =>
+              isDateInRange(t.paid_date, { from: periodFrom, to: periodTo })
+            )
+            .reduce((s, t) => s + Number(t.amount), 0)
+        : 0;
+
+    const expensesInPeriod = expensesByLead.get(lead.id) ?? 0;
+
+    return {
+      ...classifyReceivableRow({
+        leadId: lead.id,
+        source: "lead",
+        clientName: lead.name,
+        eventDate: lead.event_date,
+        eventType: lead.event_type,
+        status: lead.status,
+        contractTotal,
+        received,
+        revenueRecognizedAt: lead.revenue_recognized_at,
+      }),
+      receivedInPeriod,
+      expensesInPeriod,
+      profitInPeriod: receivedInPeriod - expensesInPeriod,
+    };
   });
 
   const { data: manualRows } = await supabase
@@ -87,19 +132,50 @@ export async function GET(request: NextRequest) {
     .eq("active", true)
     .order("event_date", { ascending: true });
 
-  const manualReceivableRows = (manualRows ?? []).map((m) =>
-    classifyReceivableRow({
-      leadId: m.id,
-      source: "manual",
-      clientName: m.client_name,
-      eventDate: m.event_date,
-      eventType: m.event_type,
-      status: "manual",
-      contractTotal: Number(m.contract_total),
-      received: Number(m.received_total),
-      revenueRecognizedAt: m.revenue_recognized_at,
-    })
-  );
+  const { data: manualTxRows } = await supabase
+    .from("manual_receivable_transactions")
+    .select("*");
+
+  const manualReceivableRows = (manualRows ?? []).map((m) => {
+    const mTxs = (manualTxRows ?? []).filter(
+      (t) => t.manual_receivable_id === m.id
+    );
+    const receivedInPeriod =
+      periodFrom && periodTo
+        ? mTxs
+            .filter((t) =>
+              isDateInRange(t.paid_date as string, {
+                from: periodFrom,
+                to: periodTo,
+              })
+            )
+            .reduce((s, t) => s + Number(t.amount), 0) ||
+          (m.received_date &&
+          isDateInRange(m.received_date as string, {
+            from: periodFrom,
+            to: periodTo,
+          })
+            ? Number(m.received_total)
+            : 0)
+        : 0;
+
+    return {
+      ...classifyReceivableRow({
+        leadId: m.id,
+        source: "manual",
+        clientName: m.client_name,
+        eventDate: m.event_date,
+        eventType: m.event_type,
+        status: "manual",
+        contractTotal: Number(m.contract_total),
+        received: Number(m.received_total),
+        revenueRecognizedAt: m.revenue_recognized_at,
+      }),
+      receivedInPeriod,
+      expensesInPeriod: 0,
+      profitInPeriod: receivedInPeriod,
+    };
+  });
 
   const allRows = [...leadRows, ...manualReceivableRows];
   const eventTypes = Array.from(
@@ -108,8 +184,14 @@ export async function GET(request: NextRequest) {
 
   let rows = allRows;
 
-  if (from) rows = rows.filter((r) => r.eventDate && r.eventDate >= from);
-  if (to) rows = rows.filter((r) => r.eventDate && r.eventDate <= to);
+  if (from && to) {
+    rows = rows.filter(
+      (r) =>
+        (r.eventDate && r.eventDate >= from && r.eventDate <= to) ||
+        (r.receivedInPeriod ?? 0) > 0 ||
+        (r.expensesInPeriod ?? 0) > 0
+    );
+  }
   if (eventType) rows = rows.filter((r) => r.eventType === eventType);
   if (status) rows = rows.filter((r) => r.status === status);
   if (bucket) rows = rows.filter((r) => r.bucket === bucket);
@@ -120,8 +202,23 @@ export async function GET(request: NextRequest) {
     return da.localeCompare(db);
   });
 
+  const summary = buildReceivablesSummary(rows);
+  const receivedInPeriodTotal = rows.reduce(
+    (s, r) => s + (r.receivedInPeriod ?? 0),
+    0
+  );
+  const expensesInPeriodTotal = rows.reduce(
+    (s, r) => s + (r.expensesInPeriod ?? 0),
+    0
+  );
+
   return NextResponse.json({
-    ...buildReceivablesSummary(rows),
+    ...summary,
     eventTypes,
+    receivedInPeriodTotal,
+    expensesInPeriodTotal,
+    profitInPeriodTotal: receivedInPeriodTotal - expensesInPeriodTotal,
+    netAvailableBalance: summary.availableTotal - totalPaidPayables,
+    paidPayablesTotal: totalPaidPayables,
   });
 }

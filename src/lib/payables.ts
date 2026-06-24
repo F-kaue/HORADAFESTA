@@ -33,6 +33,8 @@ export type AccountPayable = {
   holder: string | null;
   payment_method: string | null;
   notes: string | null;
+  lead_id: string | null;
+  client_name?: string | null;
   created_at: string;
   updated_at: string;
 };

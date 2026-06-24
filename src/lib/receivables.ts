@@ -18,6 +18,9 @@ export type ReceivableLeadRow = {
   revenueRecognizedAt: string | null;
   manuallyReleased: boolean;
   autoReleased: boolean;
+  receivedInPeriod?: number;
+  expensesInPeriod?: number;
+  profitInPeriod?: number;
 };
 
 export type ReceivablesSummary = {
@@ -28,6 +31,11 @@ export type ReceivablesSummary = {
   availableTotal: number;
   rows: ReceivableLeadRow[];
   eventTypes?: string[];
+  receivedInPeriodTotal?: number;
+  expensesInPeriodTotal?: number;
+  profitInPeriodTotal?: number;
+  netAvailableBalance?: number;
+  paidPayablesTotal?: number;
 };
 
 /** Saldo só vira receita disponível quando liberado manualmente ou evento finalizado */

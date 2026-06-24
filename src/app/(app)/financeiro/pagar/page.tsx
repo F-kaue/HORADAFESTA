@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, CheckCircle2, AlertCircle, Clock, Wallet, Pencil } from "lucide-react";
 import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-page-header";
 import { FinanceListFilters } from "@/components/finance/finance-list-filters";
+import { FinancePeriodSelector } from "@/components/finance/finance-period-selector";
+import { ClientProfitPanel } from "@/components/finance/client-profit-panel";
+import { LeadSelect } from "@/components/finance/lead-select";
+import { useFinancePeriod } from "@/components/finance/use-finance-period";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { PayableEditDialog } from "@/components/finance/payable-edit-dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +34,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { matchesSearch } from "@/lib/search-text";
+import { formatPeriodLabel, getDefaultPeriodRange } from "@/lib/finance-period";
+import type { ClientProfitRow } from "@/lib/client-profit";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -41,13 +47,14 @@ const STATUS_LABELS = {
 
 export default function ContasAPagarPage() {
   const branding = useReportBranding();
+  const { mode, range, setMode, setRange } = useFinancePeriod("week");
   const [items, setItems] = useState<AccountPayable[]>([]);
+  const [clientProfit, setClientProfit] = useState<ClientProfitRow[]>([]);
+  const [periodPaidOut, setPeriodPaidOut] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [holderFilter, setHolderFilter] = useState("all");
@@ -63,6 +70,7 @@ export default function ContasAPagarPage() {
   const [holder, setHolder] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
   const [notes, setNotes] = useState("");
+  const [leadId, setLeadId] = useState("none");
   const [markPaid, setMarkPaid] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -70,28 +78,45 @@ export default function ContasAPagarPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
+    const params = new URLSearchParams({
+      from: range.from,
+      to: range.to,
+    });
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (categoryFilter !== "all") params.set("category", categoryFilter);
     if (holderFilter !== "all") params.set("holder", holderFilter);
     if (methodFilter !== "all") params.set("payment_method", methodFilter);
 
-    const res = await fetch(`/api/accounts-payable?${params}`, { cache: "no-store" });
-    const json = await res.json();
+    const [payablesRes, cashflowRes] = await Promise.all([
+      fetch(`/api/accounts-payable?${params}`, { cache: "no-store" }),
+      fetch(
+        `/api/finance/cashflow?from=${range.from}&to=${range.to}&mode=${mode}`,
+        { cache: "no-store" }
+      ),
+    ]);
+    const json = await payablesRes.json();
+    const cashflow = await cashflowRes.json();
     setItems(json.items ?? []);
     setHolders(json.holders ?? []);
+    setPeriodPaidOut(json.periodPaidOut ?? 0);
+    setClientProfit(cashflow.clientProfit ?? []);
     setLoading(false);
-  }, [from, to, statusFilter, categoryFilter, holderFilter, methodFilter]);
+  }, [
+    range.from,
+    range.to,
+    mode,
+    statusFilter,
+    categoryFilter,
+    holderFilter,
+    methodFilter,
+  ]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const clearFilters = () => {
-    setFrom("");
-    setTo("");
+    setRange(getDefaultPeriodRange(mode));
     setStatusFilter("all");
     setCategoryFilter("all");
     setHolderFilter("all");
@@ -100,11 +125,15 @@ export default function ContasAPagarPage() {
   };
 
   const hasActiveFilters =
-    Boolean(from || to || search.trim()) ||
+    Boolean(search.trim()) ||
     statusFilter !== "all" ||
     categoryFilter !== "all" ||
     holderFilter !== "all" ||
-    methodFilter !== "all";
+    methodFilter !== "all" ||
+    range.from !== getDefaultPeriodRange(mode).from ||
+    range.to !== getDefaultPeriodRange(mode).to;
+
+  const periodLabel = formatPeriodLabel(range, mode);
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
@@ -113,6 +142,7 @@ export default function ContasAPagarPage() {
         search,
         item.description,
         item.supplier ?? undefined,
+        item.client_name ?? undefined,
         item.category,
         item.holder ?? undefined,
         item.payment_method ?? undefined,
@@ -132,6 +162,7 @@ export default function ContasAPagarPage() {
     setHolder("");
     setPaymentMethod(PAYMENT_METHODS[0]);
     setNotes("");
+    setLeadId("none");
     setMarkPaid(false);
     setShowForm(false);
   };
@@ -157,6 +188,7 @@ export default function ContasAPagarPage() {
         holder: holder || undefined,
         payment_method: paymentMethod,
         notes: notes || undefined,
+        lead_id: leadId !== "none" ? leadId : null,
       }),
     });
     setSaving(false);
@@ -205,6 +237,7 @@ export default function ContasAPagarPage() {
 
   const exportRows = filteredItems.map((i) => ({
     descricao: i.description,
+    cliente: i.client_name ?? "—",
     fornecedor: i.supplier ?? "—",
     categoria: i.category,
     valor: i.amount,
@@ -217,6 +250,7 @@ export default function ContasAPagarPage() {
 
   const columns = [
     { key: "descricao", header: "Descrição" },
+    { key: "cliente", header: "Cliente" },
     { key: "fornecedor", header: "Fornecedor" },
     { key: "categoria", header: "Categoria" },
     {
@@ -232,8 +266,9 @@ export default function ContasAPagarPage() {
   ];
 
   const filterMeta = [
-    ...(from ? [{ label: "De", value: formatDate(from) }] : []),
-    ...(to ? [{ label: "Até", value: formatDate(to) }] : []),
+    { label: "Período", value: periodLabel },
+    { label: "De", value: formatDate(range.from) },
+    { label: "Até", value: formatDate(range.to) },
     ...(statusFilter !== "all"
       ? [{ label: "Status", value: STATUS_LABELS[statusFilter as keyof typeof STATUS_LABELS] }]
       : []),
@@ -249,7 +284,7 @@ export default function ContasAPagarPage() {
     <div className="space-y-5 sm:space-y-6">
       <FinancePageHeader
         title="Contas a pagar"
-        description="Cadastre despesas, acompanhe vencimentos e controle portador e forma de pagamento."
+        description="Despesas pagas abatem da receita disponível. Vincule ao cliente para ver lucro por evento."
         actions={
           <div className="flex flex-wrap gap-2">
             <ReportToolbar
@@ -280,18 +315,27 @@ export default function ContasAPagarPage() {
         }
       />
 
+      <FinancePeriodSelector
+        mode={mode}
+        range={range}
+        onModeChange={setMode}
+        onRangeChange={setRange}
+      />
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <FinanceStatCard
-          label="Pendentes"
+          label="Pagas no período"
+          value={formatCurrency(periodPaidOut)}
+          icon={Wallet}
+          tone="rose"
+          hint={`Saídas em ${periodLabel}`}
+        />
+        <FinanceStatCard
+          label="Pendentes no período"
           value={formatCurrency(summary.pendingTotal)}
           icon={Clock}
           tone="amber"
-        />
-        <FinanceStatCard
-          label="Pagas"
-          value={formatCurrency(summary.paidTotal)}
-          icon={Wallet}
-          tone="emerald"
+          hint="Ainda não abatem do saldo disponível"
         />
         <FinanceStatCard
           label="Vencidas"
@@ -320,6 +364,10 @@ export default function ContasAPagarPage() {
                   onChange={(e) => setSupplier(e.target.value)}
                   placeholder="Nome do fornecedor"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Cliente / evento</Label>
+                <LeadSelect value={leadId} onValueChange={setLeadId} />
               </div>
               <div className="space-y-2">
                 <Label>Categoria</Label>
@@ -407,17 +455,9 @@ export default function ContasAPagarPage() {
         searchPlaceholder="Buscar por descrição, fornecedor ou portador..."
         onClear={clearFilters}
         hasActiveFilters={hasActiveFilters}
-        description="Busque despesas e refine por vencimento, status e categoria"
+        description="Busque despesas do período selecionado e refine por status e categoria"
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Vencimento — de</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Vencimento — até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label>Status</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -482,7 +522,13 @@ export default function ContasAPagarPage() {
         </div>
       </FinanceListFilters>
 
-      <FinancePanel title="Despesas" description="Todas as contas cadastradas">
+      <ClientProfitPanel
+        rows={clientProfit}
+        periodLabel={periodLabel}
+        loading={loading}
+      />
+
+      <FinancePanel title="Despesas" description={`Listagem do período: ${periodLabel}`}>
         <div className="space-y-3">
           {loading && (
             <p className="text-sm text-muted-foreground">Carregando...</p>
@@ -515,6 +561,9 @@ export default function ContasAPagarPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-foreground">{item.description}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
+                    {item.client_name && (
+                      <span className="font-semibold text-primary">{item.client_name} · </span>
+                    )}
                     {item.supplier && `${item.supplier} · `}
                     {item.category} · Vence {formatDate(item.due_date)}
                     {item.holder && ` · ${item.holder}`}

@@ -31,6 +31,7 @@ import {
   parseCurrencyBRL,
 } from "@/lib/utils";
 import { toast } from "sonner";
+import { LeadSelect } from "@/components/finance/lead-select";
 
 interface PayableEditDialogProps {
   item: AccountPayable | null;
@@ -56,6 +57,7 @@ export function PayableEditDialog({
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<PayableStatus>("pendente");
   const [paidDate, setPaidDate] = useState("");
+  const [leadId, setLeadId] = useState("none");
 
   useEffect(() => {
     if (!item || !open) return;
@@ -68,6 +70,7 @@ export function PayableEditDialog({
     setPaymentMethod(item.payment_method ?? PAYMENT_METHODS[0]);
     setNotes(item.notes ?? "");
     setStatus(item.status === "cancelado" ? "pendente" : item.status);
+    setLeadId(item.lead_id ?? "none");
     setPaidDate(
       item.paid_date ?? new Date().toISOString().slice(0, 10)
     );
@@ -99,6 +102,7 @@ export function PayableEditDialog({
           notes: notes.trim() || null,
           status,
           paid_date: status === "pago" ? paidDate : null,
+          lead_id: leadId !== "none" ? leadId : null,
         }),
       });
       const data = await res.json();
@@ -141,6 +145,10 @@ export function PayableEditDialog({
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente / evento</Label>
+              <LeadSelect value={leadId} onValueChange={setLeadId} />
             </div>
             <div className="space-y-2">
               <Label>Categoria</Label>

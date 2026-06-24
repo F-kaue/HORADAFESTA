@@ -13,6 +13,7 @@ const patchSchema = z.object({
   holder: z.string().nullable().optional(),
   payment_method: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  lead_id: z.string().uuid().nullable().optional(),
 });
 
 export async function PATCH(
@@ -48,11 +49,17 @@ export async function PATCH(
     .from("accounts_payable")
     .update(updates)
     .eq("id", id)
-    .select()
+    .select("*, leads(name)")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ...data, amount: Number(data.amount) });
+  const leads = data.leads as { name?: string } | null;
+  return NextResponse.json({
+    ...data,
+    amount: Number(data.amount),
+    client_name: leads?.name ?? null,
+    leads: undefined,
+  });
 }
 
 export async function DELETE(
