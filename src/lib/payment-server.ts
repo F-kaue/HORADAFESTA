@@ -3,6 +3,8 @@ import {
   getPaidPerRecord,
   getTotalReceived,
   roundMoney,
+  splitAmount,
+  buildRecordSyncUpdates,
   type PaymentRecordRow,
   type PaymentTransactionRow,
 } from "@/lib/payments";
@@ -184,6 +186,129 @@ export async function createPaymentPlanForLead(
   }
 
   return { ok: true };
+}
+
+export async function updatePaymentContractTotal(
+  supabase: SupabaseClient,
+  paymentId: string,
+  newTotalValue: number
+): Promise<
+  { ok: true; bundle: PaymentBundleResponse } | { ok: false; error: string }
+> {
+  const total = roundMoney(newTotalValue);
+  if (total <= 0) {
+    return { ok: false, error: "Informe um valor maior que zero" };
+  }
+
+  const { data: payment, error: payErr } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("id", paymentId)
+    .single();
+
+  if (payErr || !payment) {
+    return { ok: false, error: "Plano de pagamento não encontrado" };
+  }
+
+  const { data: recordRows } = await supabase
+    .from("payment_records")
+    .select("*")
+    .eq("payment_id", paymentId)
+    .order("installment_number");
+
+  const { data: txRows } = await supabase
+    .from("payment_transactions")
+    .select("*")
+    .eq("payment_id", paymentId);
+
+  const records = (recordRows ?? []) as PaymentRecordRow[];
+  const txs = (txRows ?? []) as PaymentTransactionRow[];
+  const received = getTotalReceived(txs);
+
+  if (total < received - 0.009) {
+    return {
+      ok: false,
+      error: `O contrato não pode ser menor que ${received.toFixed(2)} já recebido`,
+    };
+  }
+
+  const newRemaining = roundMoney(total - received);
+  const paidPerRecord = getPaidPerRecord(txs);
+
+  const openRecords = records.filter((r) => {
+    const paid = paidPerRecord[r.id] ?? 0;
+    return roundMoney(Number(r.value) - paid) > 0.009;
+  });
+
+  if (openRecords.length === 0 && newRemaining > 0.009) {
+    const maxNum = Math.max(0, ...records.map((r) => r.installment_number));
+    const lastDue =
+      records.filter((r) => r.due_date).at(-1)?.due_date ??
+      new Date().toISOString().slice(0, 10);
+    const { error: insertErr } = await supabase.from("payment_records").insert({
+      payment_id: paymentId,
+      installment_number: maxNum + 1,
+      record_kind: "parcela",
+      due_date: lastDue,
+      paid_date: null,
+      value: newRemaining,
+      is_paid: false,
+    });
+    if (insertErr) return { ok: false, error: insertErr.message };
+  } else if (openRecords.length > 0) {
+    const splits = splitAmount(newRemaining, openRecords.length);
+    for (let i = 0; i < openRecords.length; i++) {
+      const record = openRecords[i];
+      const paid = paidPerRecord[record.id] ?? 0;
+      const newValue = roundMoney(paid + splits[i]);
+      const { error: updErr } = await supabase
+        .from("payment_records")
+        .update({
+          value: newValue,
+          is_paid: newValue - paid <= 0.009,
+          paid_date: newValue - paid <= 0.009 ? record.paid_date : null,
+        })
+        .eq("id", record.id);
+      if (updErr) return { ok: false, error: updErr.message };
+    }
+  }
+
+  const downPayment = Number(payment.down_payment ?? 0);
+  const balance = roundMoney(Math.max(0, total - downPayment));
+  const installments = Math.max(1, Number(payment.installments) || 1);
+
+  const { error: paymentErr } = await supabase
+    .from("payments")
+    .update({
+      total_value: total,
+      installment_value: balance > 0 ? roundMoney(balance / installments) : 0,
+    })
+    .eq("id", paymentId);
+
+  if (paymentErr) return { ok: false, error: paymentErr.message };
+
+  await supabase.from("leads").update({ total_value: total }).eq("id", payment.lead_id);
+
+  const { data: freshRecords } = await supabase
+    .from("payment_records")
+    .select("*")
+    .eq("payment_id", paymentId);
+
+  const syncUpdates = buildRecordSyncUpdates(
+    (freshRecords ?? []) as PaymentRecordRow[],
+    txs
+  );
+  for (const update of syncUpdates) {
+    await supabase
+      .from("payment_records")
+      .update({ is_paid: update.is_paid, paid_date: update.paid_date })
+      .eq("id", update.id);
+  }
+
+  const bundle = await fetchPaymentBundle(supabase, payment.lead_id);
+  if (!bundle) return { ok: false, error: "Erro ao recarregar pagamentos" };
+
+  return { ok: true, bundle };
 }
 
 /** Resumo financeiro por lead (plano mais recente) — para kanban e filtros */

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Wallet } from "lucide-react";
+import { EditableContractTotal } from "@/components/finance/editable-contract-total";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -92,6 +93,23 @@ export function ManualReceivableFinancial({
     if (summary.received > 0) return { label: "Parcialmente pago", tone: "warning" as const };
     return { label: "Aguardando pagamentos", tone: "danger" as const };
   })();
+
+  const handleUpdateContractTotal = async (newTotal: number) => {
+    const res = await fetch(`/api/finance/manual-receivables/${receivableId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contract_total: newTotal }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Erro ao atualizar contrato");
+      return false;
+    }
+    setSummary(data.summary);
+    toast.success("Valor do contrato atualizado");
+    onUpdate();
+    return true;
+  };
 
   const handleAddReceipt = async () => {
     const amount = parseCurrencyBRL(receiptAmount);
@@ -184,9 +202,10 @@ export function ManualReceivableFinancial({
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="rounded-xl border-2 border-border bg-card p-3">
           <p className="text-2xs font-bold uppercase text-muted-foreground">Contrato</p>
-          <p className="font-display text-base font-bold sm:text-lg">
-            {formatCurrency(summary.total)}
-          </p>
+          <EditableContractTotal
+            value={summary.total}
+            onSave={handleUpdateContractTotal}
+          />
         </div>
         <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3">
           <p className="text-2xs font-bold uppercase text-emerald-800">Recebido</p>

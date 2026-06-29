@@ -4,6 +4,7 @@ import { syncLeadGoogleCalendarPayment } from "@/lib/google-calendar-payment";
 import {
   createPaymentPlanForLead,
   fetchPaymentBundle,
+  updatePaymentContractTotal,
 } from "@/lib/payment-server";
 import { roundMoney } from "@/lib/payments";
 import { z } from "zod";
@@ -99,4 +100,55 @@ export async function POST(request: NextRequest) {
 
   const bundle = await fetchPaymentBundle(supabase, lead_id);
   return NextResponse.json(bundle ?? { payment: null });
+}
+
+const patchByLeadSchema = z.object({
+  lead_id: z.string().uuid(),
+  total_value: z.number().positive(),
+});
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const parsed = patchByLeadSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+  }
+
+  const { data: paymentRows } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("lead_id", parsed.data.lead_id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const paymentId = paymentRows?.[0]?.id;
+  if (!paymentId) {
+    return NextResponse.json(
+      { error: "Este cliente ainda não tem plano de pagamento" },
+      { status: 404 }
+    );
+  }
+
+  const result = await updatePaymentContractTotal(
+    supabase,
+    paymentId,
+    parsed.data.total_value
+  );
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  try {
+    await syncLeadGoogleCalendarPayment(supabase, parsed.data.lead_id);
+  } catch {
+    // sync opcional
+  }
+
+  return NextResponse.json(result.bundle);
 }

@@ -33,6 +33,7 @@ import { FinancePageHeader, FinancePanel } from "@/components/finance/finance-pa
 import { FinanceListFilters } from "@/components/finance/finance-list-filters";
 import { FinancePeriodSelector } from "@/components/finance/finance-period-selector";
 import { ClientProfitPanel } from "@/components/finance/client-profit-panel";
+import { ReceivableContractCell } from "@/components/finance/receivable-contract-cell";
 import { useFinancePeriod } from "@/components/finance/use-finance-period";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { ManualReceivableDialog } from "@/components/finance/manual-receivable-dialog";
@@ -469,7 +470,9 @@ export default function ContasAReceberPage() {
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <dt className="text-muted-foreground">Contrato</dt>
-                      <dd className="font-semibold">{formatCurrency(r.contractTotal)}</dd>
+                      <dd className="font-semibold">
+                        <ReceivableContractCell row={r} onUpdated={load} compact />
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">Recebido</dt>
@@ -593,7 +596,7 @@ export default function ContasAReceberPage() {
                         {formatCurrency(r.profitInPeriod ?? 0)}
                       </td>
                       <td className="py-3.5 pr-3 text-right tabular-nums">
-                        {formatCurrency(r.contractTotal)}
+                        <ReceivableContractCell row={r} onUpdated={load} compact />
                       </td>
                       <td className="py-3.5 pr-3 text-right tabular-nums">
                         {formatCurrency(r.received)}
