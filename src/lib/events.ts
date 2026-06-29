@@ -1,6 +1,10 @@
 import type { Lead, LeadStatus } from "@/types/database";
 import type { GoogleCalendarEventRow } from "@/lib/google-calendar";
-import { extractClientNameFromSummary } from "@/lib/google-calendar";
+import {
+  extractClientNameFromSummary,
+  isPaidGoogleCalendarEvent,
+  normalizeCalendarEventSummary,
+} from "@/lib/google-calendar";
 import type { LeadPaymentSummary } from "@/lib/payment-status";
 import { formatSlotsLabel } from "@/lib/slots";
 
@@ -35,9 +39,7 @@ function parseTimeFromIso(iso: string): string | null {
 
 function buildTitle(lead: Lead, google?: GoogleCalendarEventRow): string {
   if (google?.summary) {
-    return google.summary
-      .replace(/^🏁 REALIZADO · /, "")
-      .replace(/^✅ QUITADO · /, "");
+    return normalizeCalendarEventSummary(google.summary);
   }
   if (lead.event_type) return `${lead.name} - ${lead.event_type}`;
   return lead.name;
@@ -119,14 +121,14 @@ export function mergeAgendaEvents(
       id: `google-${g.id}`,
       leadId: null,
       googleEventId: g.id,
-      title: g.summary,
+      title: normalizeCalendarEventSummary(g.summary),
       description: g.description ?? null,
       eventDate: date,
       startTime: parseTimeFromIso(g.start),
       endTime: parseTimeFromIso(g.end),
       isAllDay: g.isAllDay,
       htmlLink: g.htmlLink ?? null,
-      isPaid: g.summary.includes("QUITADO"),
+      isPaid: isPaidGoogleCalendarEvent(g),
       paymentSummary: null,
       status: null,
       clientName: extractClientNameFromSummary(g.summary) ?? g.summary,

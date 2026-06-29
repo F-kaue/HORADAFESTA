@@ -173,7 +173,6 @@ export async function syncLeadGoogleCalendarDetails(
   const title = buildCalendarEventTitle(
     lead.event_type ?? "Evento",
     lead.name,
-    isPaid,
     isFinalized
   );
 
@@ -278,8 +277,7 @@ export async function createCalendarEventForLead(
     {
       title: buildCalendarEventTitle(
         lead.event_type ?? "Evento",
-        lead.name,
-        false
+        lead.name
       ),
       description,
       date: schedule.date,

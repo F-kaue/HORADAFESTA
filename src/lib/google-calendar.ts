@@ -220,12 +220,30 @@ export async function updateGoogleCalendarEventDetails(
 export function buildCalendarEventTitle(
   eventType: string,
   name: string,
-  isPaid: boolean,
   isFinalized = false
 ): string {
   const base = `${name} - ${eventType}`;
-  const withPaid = isPaid ? `✅ QUITADO · ${base}` : base;
-  return isFinalized ? `🏁 REALIZADO · ${withPaid}` : withPaid;
+  return isFinalized ? `🏁 REALIZADO · ${base}` : base;
+}
+
+/** Remove prefixos legados do título exibido no CRM */
+export function normalizeCalendarEventSummary(summary: string): string {
+  return summary
+    .replace(/^🏁 REALIZADO · /, "")
+    .replace(/^✅ QUITADO · /, "")
+    .trim();
+}
+
+/** Detecta pagamento quitado em eventos só do Google (cor, descrição ou título legado) */
+export function isPaidGoogleCalendarEvent(g: {
+  summary: string;
+  description?: string;
+  colorId?: string;
+}): boolean {
+  if (g.colorId === "2") return true;
+  if (g.description?.includes("Pagamento: QUITADO")) return true;
+  if (g.summary.includes("QUITADO")) return true;
+  return false;
 }
 
 /** Extrai nome do cliente do título do Google Calendar */
@@ -273,7 +291,6 @@ export async function updateGoogleCalendarFinalizedStatus(
         summary: buildCalendarEventTitle(
           params.eventType,
           params.leadName,
-          params.isPaid ?? false,
           true
         ),
         description: params.description,
@@ -342,8 +359,7 @@ export async function updateGoogleCalendarPaymentStatus(
       body: JSON.stringify({
         summary: buildCalendarEventTitle(
           params.eventType,
-          params.leadName,
-          params.isPaid
+          params.leadName
         ),
         description,
         colorId: params.isPaid ? "2" : "10",
