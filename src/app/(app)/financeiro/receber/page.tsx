@@ -53,6 +53,23 @@ type PageConfirm =
   | { kind: "hold"; row: ReceivableLeadRow }
   | { kind: "delete"; id: string; clientName: string };
 
+const RECEBER_SITUACAO_SHEET_COLUMNS = [
+  { key: "situacao", header: "Situação", excel: { type: "text" as const, width: 22 } },
+  { key: "qtd", header: "Qtd. clientes", excel: { type: "number" as const, sum: true, width: 14, currency: false } },
+  { key: "contrato", header: "Contrato (R$)", excel: { type: "number" as const, sum: true, width: 16 } },
+  { key: "recebido", header: "Recebido (R$)", excel: { type: "number" as const, sum: true, width: 16 } },
+  { key: "aReceber", header: "A receber (R$)", excel: { type: "number" as const, sum: true, width: 16 } },
+  { key: "retido", header: "Retido (R$)", excel: { type: "number" as const, sum: true, width: 16 } },
+  { key: "disponivel", header: "Disponível (R$)", excel: { type: "number" as const, sum: true, width: 16 } },
+];
+
+const RECEBER_CLIENT_SHEET_COLUMNS = [
+  { key: "cliente", header: "Cliente", excel: { type: "text" as const, width: 28 } },
+  { key: "recebido", header: "Recebido no período (R$)", excel: { type: "number" as const, sum: true, width: 22 } },
+  { key: "despesas", header: "Despesas no período (R$)", excel: { type: "number" as const, sum: true, width: 22 } },
+  { key: "resultado", header: "Resultado (R$)", excel: { type: "number" as const, sum: true, width: 18 } },
+];
+
 export default function ContasAReceberPage() {
   const branding = useReportBranding();
   const { mode, range, setMode, setRange } = useFinancePeriod("week");
@@ -208,52 +225,94 @@ export default function ContasAReceberPage() {
     situacao: RECEIVABLE_BUCKET_LABELS[r.bucket].label,
   }));
 
+  const situacaoSummaryRows = useMemo(() => {
+    type Acc = {
+      situacao: string;
+      qtd: number;
+      contrato: number;
+      recebido: number;
+      aReceber: number;
+      retido: number;
+      disponivel: number;
+    };
+    const map = new Map<string, Acc>();
+    for (const row of exportRows) {
+      const cur = map.get(row.situacao) ?? {
+        situacao: row.situacao,
+        qtd: 0,
+        contrato: 0,
+        recebido: 0,
+        aReceber: 0,
+        retido: 0,
+        disponivel: 0,
+      };
+      cur.qtd += 1;
+      cur.contrato += row.contrato;
+      cur.recebido += row.recebido;
+      cur.aReceber += row.aReceber;
+      cur.retido += row.retido;
+      cur.disponivel += row.disponivel;
+      map.set(row.situacao, cur);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.situacao.localeCompare(b.situacao, "pt-BR")
+    );
+  }, [exportRows]);
+
   const columns = [
-    { key: "origem", header: "Origem" },
-    { key: "cliente", header: "Cliente" },
-    { key: "data", header: "Data evento" },
-    {
-      key: "recebidoPeriodo",
-      header: "Recebido no período",
-      format: (r: { recebidoPeriodo: number }) => formatCurrency(r.recebidoPeriodo),
-    },
-    {
-      key: "despesasPeriodo",
-      header: "Despesas no período",
-      format: (r: { despesasPeriodo: number }) => formatCurrency(r.despesasPeriodo),
-    },
-    {
-      key: "resultadoPeriodo",
-      header: "Resultado",
-      format: (r: { resultadoPeriodo: number }) => formatCurrency(r.resultadoPeriodo),
-    },
-    { key: "tipo", header: "Tipo" },
+    { key: "origem", header: "Origem", excel: { type: "text" as const, width: 14 } },
+    { key: "cliente", header: "Cliente", excel: { type: "text" as const, width: 28 } },
+    { key: "data", header: "Data evento", excel: { type: "text" as const, width: 14 } },
+    { key: "tipo", header: "Tipo de evento", excel: { type: "text" as const, width: 18 } },
+    { key: "situacao", header: "Situação", excel: { type: "text" as const, width: 18 } },
     {
       key: "contrato",
-      header: "Contrato",
+      header: "Contrato (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { contrato: number }) => formatCurrency(r.contrato),
     },
     {
       key: "recebido",
-      header: "Recebido",
+      header: "Recebido (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { recebido: number }) => formatCurrency(r.recebido),
     },
     {
       key: "aReceber",
-      header: "A receber",
+      header: "A receber (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { aReceber: number }) => formatCurrency(r.aReceber),
     },
     {
       key: "retido",
-      header: "Retido",
+      header: "Retido (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { retido: number }) => formatCurrency(r.retido),
     },
     {
       key: "disponivel",
-      header: "Disponível",
+      header: "Disponível (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { disponivel: number }) => formatCurrency(r.disponivel),
     },
-    { key: "situacao", header: "Situação" },
+    {
+      key: "recebidoPeriodo",
+      header: "Recebido no período (R$)",
+      excel: { type: "number" as const, sum: true, width: 22 },
+      format: (r: { recebidoPeriodo: number }) => formatCurrency(r.recebidoPeriodo),
+    },
+    {
+      key: "despesasPeriodo",
+      header: "Despesas no período (R$)",
+      excel: { type: "number" as const, sum: true, width: 22 },
+      format: (r: { despesasPeriodo: number }) => formatCurrency(r.despesasPeriodo),
+    },
+    {
+      key: "resultadoPeriodo",
+      header: "Resultado no período (R$)",
+      excel: { type: "number" as const, sum: true, width: 22 },
+      format: (r: { resultadoPeriodo: number }) => formatCurrency(r.resultadoPeriodo),
+    },
   ];
 
   const filterMeta = [
@@ -267,6 +326,34 @@ export default function ContasAReceberPage() {
     ...(search.trim() ? [{ label: "Busca", value: search.trim() }] : []),
   ];
 
+  const excelExtraSheets = useMemo(() => {
+    const sheets: {
+      name: string;
+      columns: typeof RECEBER_SITUACAO_SHEET_COLUMNS;
+      rows: Record<string, unknown>[];
+    }[] = [];
+    if (situacaoSummaryRows.length) {
+      sheets.push({
+        name: "Por situação",
+        columns: RECEBER_SITUACAO_SHEET_COLUMNS,
+        rows: situacaoSummaryRows,
+      });
+    }
+    if (clientProfitRows.length) {
+      sheets.push({
+        name: "Por cliente",
+        columns: RECEBER_CLIENT_SHEET_COLUMNS,
+        rows: clientProfitRows.map((r) => ({
+          cliente: r.clientName,
+          recebido: r.receivedInPeriod,
+          despesas: r.expensesInPeriod,
+          resultado: r.profit,
+        })),
+      });
+    }
+    return sheets.length ? sheets : undefined;
+  }, [situacaoSummaryRows, clientProfitRows]);
+
   return (
     <div className="space-y-5 sm:space-y-6">
       <FinancePageHeader
@@ -277,7 +364,42 @@ export default function ContasAReceberPage() {
             <ReportToolbar
               disabled={!filteredRows.length}
               onExportExcel={() =>
-                exportToExcel("contas-a-receber", columns, exportRows)
+                exportToExcel({
+                  filename: "contas-a-receber",
+                  sheetName: "Recebíveis",
+                  title: "Contas a Receber",
+                  branding,
+                  filters: filterMeta,
+                  summaryLines: data
+                    ? [
+                        {
+                          label: "Saldo disponível",
+                          value: data.netAvailableBalance ?? 0,
+                        },
+                        {
+                          label: "Recebido no período",
+                          value: data.receivedInPeriodTotal ?? 0,
+                        },
+                        {
+                          label: "Recebido retido",
+                          value: data.heldTotal ?? 0,
+                        },
+                        {
+                          label: "Resultado do período",
+                          value: data.profitInPeriodTotal ?? 0,
+                        },
+                        {
+                          label: "Total a receber (lista)",
+                          value: data.pendingTotal ?? 0,
+                        },
+                      ]
+                    : [],
+                  columns,
+                  rows: exportRows,
+                  footnote:
+                    "Colunas em R$ são valores numéricos (pode usar =SOMA, =MÉDIA etc.). A linha TOTAL GERAL soma automaticamente. Use os filtros do Excel no cabeçalho da tabela.",
+                  extraSheets: excelExtraSheets,
+                })
               }
               onExportPdf={() =>
                 exportToPdf({

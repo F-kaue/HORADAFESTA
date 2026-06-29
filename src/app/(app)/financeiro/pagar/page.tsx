@@ -249,20 +249,21 @@ export default function ContasAPagarPage() {
   }));
 
   const columns = [
-    { key: "descricao", header: "Descrição" },
-    { key: "cliente", header: "Cliente" },
-    { key: "fornecedor", header: "Fornecedor" },
-    { key: "categoria", header: "Categoria" },
+    { key: "descricao", header: "Descrição", excel: { type: "text" as const, width: 32 } },
+    { key: "cliente", header: "Cliente", excel: { type: "text" as const, width: 24 } },
+    { key: "fornecedor", header: "Fornecedor", excel: { type: "text" as const, width: 22 } },
+    { key: "categoria", header: "Categoria", excel: { type: "text" as const, width: 16 } },
     {
       key: "valor",
-      header: "Valor",
+      header: "Valor (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { valor: number }) => formatCurrency(r.valor),
     },
-    { key: "vencimento", header: "Vencimento" },
-    { key: "pagamento", header: "Pagamento" },
-    { key: "status", header: "Status" },
-    { key: "portador", header: "Portador" },
-    { key: "forma", header: "Forma" },
+    { key: "vencimento", header: "Vencimento", excel: { type: "text" as const, width: 14 } },
+    { key: "pagamento", header: "Pagamento", excel: { type: "text" as const, width: 14 } },
+    { key: "status", header: "Status", excel: { type: "text" as const, width: 12 } },
+    { key: "portador", header: "Portador", excel: { type: "text" as const, width: 16 } },
+    { key: "forma", header: "Forma", excel: { type: "text" as const, width: 14 } },
   ];
 
   const filterMeta = [
@@ -289,7 +290,24 @@ export default function ContasAPagarPage() {
           <div className="flex flex-wrap gap-2">
             <ReportToolbar
               disabled={!filteredItems.length}
-              onExportExcel={() => exportToExcel("contas-a-pagar", columns, exportRows)}
+              onExportExcel={() =>
+                exportToExcel({
+                  filename: "contas-a-pagar",
+                  sheetName: "Despesas",
+                  title: "Contas a Pagar",
+                  branding,
+                  filters: filterMeta,
+                  summaryLines: [
+                    { label: "Pagas no período", value: periodPaidOut },
+                    { label: "Pendentes", value: summary.pendingTotal },
+                    { label: "Vencidas", value: summary.overdueTotal },
+                  ],
+                  columns,
+                  rows: exportRows,
+                  footnote:
+                    "Valores em R$ são numéricos e somáveis. A linha TOTAL GERAL usa fórmulas =SOMA().",
+                })
+              }
               onExportPdf={() =>
                 exportToPdf({
                   filename: "contas-a-pagar",

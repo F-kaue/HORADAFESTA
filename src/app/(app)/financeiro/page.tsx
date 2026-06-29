@@ -154,21 +154,43 @@ export default function FluxoDeCaixaPage() {
     })) ?? [];
 
   const columns = [
-    { key: "periodo", header: "Período" },
+    { key: "periodo", header: "Período", excel: { type: "text" as const, width: 18 } },
     {
       key: "entradas",
-      header: "Entradas",
+      header: "Entradas (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { entradas: number }) => formatCurrency(r.entradas),
     },
     {
       key: "saidas",
-      header: "Saídas",
+      header: "Saídas (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { saidas: number }) => formatCurrency(r.saidas),
     },
     {
       key: "saldo",
-      header: "Saldo",
+      header: "Saldo (R$)",
+      excel: { type: "number" as const, sum: true, width: 16 },
       format: (r: { saldo: number }) => formatCurrency(r.saldo),
+    },
+  ];
+
+  const clientSheetColumns = [
+    { key: "cliente", header: "Cliente", excel: { type: "text" as const, width: 28 } },
+    {
+      key: "recebido",
+      header: "Recebido no período (R$)",
+      excel: { type: "number" as const, sum: true, width: 22 },
+    },
+    {
+      key: "despesas",
+      header: "Despesas no período (R$)",
+      excel: { type: "number" as const, sum: true, width: 22 },
+    },
+    {
+      key: "resultado",
+      header: "Resultado (R$)",
+      excel: { type: "number" as const, sum: true, width: 18 },
     },
   ];
 
@@ -187,7 +209,35 @@ export default function FluxoDeCaixaPage() {
           <ReportToolbar
             disabled={!data || loading}
             onExportExcel={() =>
-              exportToExcel("fluxo-de-caixa", columns, exportRows)
+              exportToExcel({
+                filename: "fluxo-de-caixa",
+                sheetName: "Fluxo",
+                title: "Fluxo de Caixa",
+                branding,
+                filters: filterMeta,
+                summaryLines: data
+                  ? [
+                      { label: "Saldo disponível", value: data.netAvailableBalance },
+                      { label: "Recebido retido", value: data.receivables.heldTotal },
+                      { label: "Entradas no período", value: data.periodReceivedIn },
+                      { label: "Saídas no período", value: data.periodPaidOut },
+                      { label: "Resultado do período", value: data.periodBalance },
+                    ]
+                  : [],
+                columns,
+                rows: exportRows,
+                footnote:
+                  "Valores em R$ são numéricos e somáveis. Use a aba Por cliente para lucro por evento.",
+                extraSheets: clientExportRows.length
+                  ? [
+                      {
+                        name: "Por cliente",
+                        columns: clientSheetColumns,
+                        rows: clientExportRows,
+                      },
+                    ]
+                  : undefined,
+              })
             }
             onExportPdf={() =>
               exportToPdf({
