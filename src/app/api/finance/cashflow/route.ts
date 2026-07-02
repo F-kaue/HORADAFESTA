@@ -8,7 +8,7 @@ import {
   type FinancePeriodRange,
 } from "@/lib/finance-period";
 import { summarizePayables } from "@/lib/payables";
-import { buildReceivablesSummary, classifyReceivableRow } from "@/lib/receivables";
+import { buildReceivablesSummary, classifyReceivableRow, computeReceivedInEventPeriod, isEventInFinancePeriod } from "@/lib/receivables";
 import { getTotalReceived } from "@/lib/payments";
 import type { PaymentTransactionRow } from "@/lib/payments";
 
@@ -92,9 +92,11 @@ export async function GET(request: NextRequest) {
       ? txs.filter((t) => t.payment_id === payment.id)
       : [];
     const received = payment ? getTotalReceived(paymentTxs) : 0;
-    const receivedInPeriod = paymentTxs
-      .filter((t) => isDateInRange(t.paid_date, range))
-      .reduce((s, t) => s + Number(t.amount), 0);
+    const receivedInPeriod = computeReceivedInEventPeriod(
+      received,
+      lead.event_date,
+      range
+    );
 
     return {
       ...classifyReceivableRow({
@@ -122,18 +124,11 @@ export async function GET(request: NextRequest) {
     .select("*");
 
   const manualReceivableRows = (manualRows ?? []).map((m) => {
-    const mTxs = (manualTxRows ?? []).filter(
-      (t) => t.manual_receivable_id === m.id
+    const receivedInPeriod = computeReceivedInEventPeriod(
+      Number(m.received_total),
+      m.event_date as string | null,
+      range
     );
-    const receivedInPeriodFromTx = mTxs
-      .filter((t) => isDateInRange(t.paid_date as string, range))
-      .reduce((s, t) => s + Number(t.amount), 0);
-    const receivedInPeriod =
-      receivedInPeriodFromTx > 0
-        ? receivedInPeriodFromTx
-        : m.received_date && isDateInRange(m.received_date as string, range)
-          ? Number(m.received_total)
-          : 0;
 
     return {
       ...classifyReceivableRow({
@@ -152,14 +147,18 @@ export async function GET(request: NextRequest) {
   });
 
   const receivableRows = [...leadReceivableRows, ...manualReceivableRows];
-  const receivables = buildReceivablesSummary(receivableRows);
+  const periodReceivableRows = receivableRows.filter((r) =>
+    isEventInFinancePeriod(r.eventDate, range)
+  );
+  const globalReceivables = buildReceivablesSummary(receivableRows);
+  const receivables = buildReceivablesSummary(periodReceivableRows);
 
-  const periodReceivedIn = receivableRows.reduce(
+  const periodReceivedIn = periodReceivableRows.reduce(
     (s, r) => s + (r.receivedInPeriod ?? 0),
     0
   );
 
-  const netAvailableBalance = receivables.availableTotal - totalPaidPayables;
+  const netAvailableBalance = globalReceivables.availableTotal - totalPaidPayables;
 
   const periodExpensesByLead = new Map<string, number>();
   for (const p of payables) {
@@ -167,6 +166,8 @@ export async function GET(request: NextRequest) {
       continue;
     }
     if (!p.lead_id) continue;
+    const lead = (leads ?? []).find((l) => l.id === p.lead_id);
+    if (!isEventInFinancePeriod(lead?.event_date, range)) continue;
     periodExpensesByLead.set(
       p.lead_id as string,
       (periodExpensesByLead.get(p.lead_id as string) ?? 0) + Number(p.amount)
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest) {
   }
 
   const clientProfit = buildClientProfitRows(
-    receivableRows
+    periodReceivableRows
       .filter((r) => (r.receivedInPeriod ?? 0) > 0)
       .map((r) => ({
         leadId: r.source === "lead" ? r.leadId : null,
@@ -187,7 +188,11 @@ export async function GET(request: NextRequest) {
           p.status === "pago" &&
           p.paid_date &&
           isDateInRange(p.paid_date as string, range) &&
-          p.lead_id
+          p.lead_id &&
+          isEventInFinancePeriod(
+            (leads ?? []).find((l) => l.id === p.lead_id)?.event_date,
+            range
+          )
       )
       .map((p) => ({
         leadId: p.lead_id as string,

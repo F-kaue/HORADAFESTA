@@ -464,21 +464,21 @@ export default function ContasAReceberPage() {
           value={formatCurrency(data?.receivedInPeriodTotal ?? 0)}
           icon={ArrowDownCircle}
           tone="emerald"
-          hint={periodLabel}
+          hint={`Eventos com data em ${periodLabel.toLowerCase()}`}
         />
         <FinanceStatCard
           label="Recebido retido"
           value={formatCurrency(data?.heldTotal ?? 0)}
           icon={Banknote}
           tone="sky"
-          hint="Não é afetado por despesas"
+          hint="Retido dos eventos deste período"
         />
         <FinanceStatCard
           label="Resultado do período"
           value={formatCurrency(data?.profitInPeriodTotal ?? 0)}
           icon={Clock}
           tone={(data?.profitInPeriodTotal ?? 0) >= 0 ? "emerald" : "rose"}
-          hint="Recebido menos despesas vinculadas"
+          hint="Recebido dos eventos menos despesas vinculadas"
         />
       </div>
 
@@ -535,7 +535,7 @@ export default function ContasAReceberPage() {
 
       <FinancePanel
         title="Recebíveis"
-        description="Clique em um cliente para acompanhar pagamentos e registrar recebimentos"
+        description="Eventos com data no período selecionado — pagamentos antecipados de outras datas não entram aqui"
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">

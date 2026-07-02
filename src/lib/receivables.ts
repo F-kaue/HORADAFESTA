@@ -1,3 +1,8 @@
+import {
+  isDateInRange,
+  type FinancePeriodRange,
+} from "@/lib/finance-period";
+
 export type ReceivableBucket = "pending" | "held" | "available";
 
 export type ReceivableSource = "lead" | "manual";
@@ -37,6 +42,25 @@ export type ReceivablesSummary = {
   netAvailableBalance?: number;
   paidPayablesTotal?: number;
 };
+
+/** Evento pertence ao período selecionado (semana/mês) pela data do evento */
+export function isEventInFinancePeriod(
+  eventDate: string | null | undefined,
+  range: FinancePeriodRange | null | undefined
+): boolean {
+  if (!range) return true;
+  return isDateInRange(eventDate, range);
+}
+
+/** Recebido contabilizado no período = total recebido dos eventos com data no intervalo */
+export function computeReceivedInEventPeriod(
+  received: number,
+  eventDate: string | null | undefined,
+  range: FinancePeriodRange | null | undefined
+): number {
+  if (!isEventInFinancePeriod(eventDate, range)) return 0;
+  return received;
+}
 
 /** Saldo só vira receita disponível quando liberado manualmente ou evento finalizado */
 export function isRevenueRecognized(

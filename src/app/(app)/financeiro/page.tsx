@@ -283,14 +283,14 @@ export default function FluxoDeCaixaPage() {
           value={formatCurrency(data?.receivables.heldTotal ?? 0)}
           icon={Clock}
           tone="sky"
-          hint="Não é afetado por despesas"
+          hint="Retido dos eventos deste período"
         />
         <FinanceStatCard
           label="Entradas no período"
           value={formatCurrency(data?.periodReceivedIn ?? 0)}
           icon={ArrowDownLeft}
           tone="emerald"
-          hint={`Recebimentos em ${periodLabel}`}
+          hint={`Recebido dos eventos em ${periodLabel.toLowerCase()}`}
         />
         <FinanceStatCard
           label="Saídas no período"
