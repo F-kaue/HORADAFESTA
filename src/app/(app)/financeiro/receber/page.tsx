@@ -438,7 +438,7 @@ export default function ContasAReceberPage() {
             </p>
             <p>
               <strong className="text-foreground">Disponível:</strong> liberado
-              somente quando você confirma o saldo em Contas a receber.
+              quando você confirma o saldo ou após o evento ser finalizado.
             </p>
           </div>
         </div>
