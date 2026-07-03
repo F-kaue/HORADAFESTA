@@ -62,15 +62,13 @@ export function computeReceivedInEventPeriod(
   return received;
 }
 
-/** Saldo só vira receita disponível quando liberado manualmente ou evento finalizado */
+/** Saldo só vira receita disponível quando liberado manualmente em Contas a receber */
 export function isRevenueRecognized(
   _eventDate: string | null | undefined,
-  leadStatus: string,
+  _leadStatus: string,
   revenueRecognizedAt?: string | null
 ): boolean {
-  if (revenueRecognizedAt) return true;
-  if (leadStatus === "finalizado") return true;
-  return false;
+  return Boolean(revenueRecognizedAt);
 }
 
 export function classifyReceivableRow(input: {
@@ -86,13 +84,7 @@ export function classifyReceivableRow(input: {
 }): ReceivableLeadRow {
   const pending = Math.max(0, input.contractTotal - input.received);
   const manuallyReleased = Boolean(input.revenueRecognizedAt);
-  const recognized = isRevenueRecognized(
-    input.eventDate,
-    input.status,
-    input.revenueRecognizedAt
-  );
-  const autoReleased =
-    recognized && !manuallyReleased && input.received > 0;
+  const recognized = manuallyReleased;
   const held = recognized ? 0 : input.received;
   const available = recognized ? input.received : 0;
 
@@ -116,7 +108,7 @@ export function classifyReceivableRow(input: {
     bucket,
     revenueRecognizedAt: input.revenueRecognizedAt ?? null,
     manuallyReleased,
-    autoReleased,
+    autoReleased: false,
   };
 }
 
@@ -151,7 +143,7 @@ export const RECEIVABLE_BUCKET_LABELS: Record<
   available: {
     label: "Receita disponível",
     description:
-      "Valor recebido e liberado para uso (confirmado por você ou evento finalizado)",
+      "Valor recebido e liberado por você em Contas a receber",
     color: "text-emerald-700 bg-emerald-50 border-emerald-200",
   },
 };
