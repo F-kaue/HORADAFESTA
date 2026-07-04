@@ -34,7 +34,13 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { matchesSearch } from "@/lib/search-text";
-import { formatPeriodLabel, getDefaultPeriodRange } from "@/lib/finance-period";
+import {
+  formatPeriodLabel,
+  getChartBucketMode,
+  getDefaultPeriodRange,
+  isValidPeriodRange,
+  type FinancePeriodRange,
+} from "@/lib/finance-period";
 import type { ClientProfitRow } from "@/lib/client-profit";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -47,7 +53,7 @@ const STATUS_LABELS = {
 
 export default function ContasAPagarPage() {
   const branding = useReportBranding();
-  const { mode, range, setMode, setRange } = useFinancePeriod("week");
+  const { mode, range, setMode, setRange, setCustomRange } = useFinancePeriod("week");
   const [items, setItems] = useState<AccountPayable[]>([]);
   const [clientProfit, setClientProfit] = useState<ClientProfitRow[]>([]);
   const [periodPaidOut, setPeriodPaidOut] = useState(0);
@@ -87,10 +93,11 @@ export default function ContasAPagarPage() {
     if (holderFilter !== "all") params.set("holder", holderFilter);
     if (methodFilter !== "all") params.set("payment_method", methodFilter);
 
+    const chartMode = getChartBucketMode(mode, range);
     const [payablesRes, cashflowRes] = await Promise.all([
       fetch(`/api/accounts-payable?${params}`, { cache: "no-store" }),
       fetch(
-        `/api/finance/cashflow?from=${range.from}&to=${range.to}&mode=${mode}`,
+        `/api/finance/cashflow?from=${range.from}&to=${range.to}&mode=${chartMode}`,
         { cache: "no-store" }
       ),
     ]);
@@ -116,7 +123,8 @@ export default function ContasAPagarPage() {
   }, [load]);
 
   const clearFilters = () => {
-    setRange(getDefaultPeriodRange(mode));
+    setMode("week");
+    setRange(getDefaultPeriodRange("week"));
     setStatusFilter("all");
     setCategoryFilter("all");
     setHolderFilter("all");
@@ -124,14 +132,25 @@ export default function ContasAPagarPage() {
     setSearch("");
   };
 
+  const defaultWeekRange = getDefaultPeriodRange("week");
   const hasActiveFilters =
     Boolean(search.trim()) ||
     statusFilter !== "all" ||
     categoryFilter !== "all" ||
     holderFilter !== "all" ||
     methodFilter !== "all" ||
-    range.from !== getDefaultPeriodRange(mode).from ||
-    range.to !== getDefaultPeriodRange(mode).to;
+    mode !== "week" ||
+    range.from !== defaultWeekRange.from ||
+    range.to !== defaultWeekRange.to;
+
+  const handlePeriodRangeChange = useCallback(
+    (next: FinancePeriodRange) => {
+      if (isValidPeriodRange(next.from, next.to)) {
+        setCustomRange(next.from, next.to);
+      }
+    },
+    [setCustomRange]
+  );
 
   const periodLabel = formatPeriodLabel(range, mode);
 
@@ -474,6 +493,8 @@ export default function ContasAPagarPage() {
         onClear={clearFilters}
         hasActiveFilters={hasActiveFilters}
         description="Busque despesas do período selecionado e refine por status e categoria"
+        periodRange={range}
+        onPeriodRangeChange={handlePeriodRangeChange}
       >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">

@@ -16,8 +16,16 @@ export function useFinancePeriod(initialMode: FinancePeriodMode = "week") {
 
   const setMode = useCallback((next: FinancePeriodMode) => {
     setModeState(next);
-    setRange(getPeriodRange(next));
+    if (next !== "custom") {
+      setRange(getPeriodRange(next));
+    }
   }, []);
 
-  return { mode, range, setMode, setRange };
+  const setCustomRange = useCallback((from: string, to: string) => {
+    if (!from || !to || from > to) return;
+    setModeState("custom");
+    setRange({ from, to });
+  }, []);
+
+  return { mode, range, setMode, setRange, setCustomRange };
 }

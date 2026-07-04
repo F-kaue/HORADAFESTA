@@ -66,30 +66,37 @@ export function FinancePeriodSelector({
               {formatPeriodModeLabel(option)}
             </button>
           ))}
+          {mode === "custom" && (
+            <span className="rounded-lg px-3 py-1.5 text-xs font-bold bg-primary/15 text-primary">
+              Personalizado
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => go(-1)}
-            aria-label="Período anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => go(1)}
-            aria-label="Próximo período"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        {mode !== "custom" && (
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => go(-1)}
+              aria-label="Período anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => go(1)}
+              aria-label="Próximo período"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

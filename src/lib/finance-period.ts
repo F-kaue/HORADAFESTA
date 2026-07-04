@@ -1,4 +1,4 @@
-export type FinancePeriodMode = "week" | "month";
+export type FinancePeriodMode = "week" | "month" | "custom";
 
 export type FinancePeriodRange = {
   from: string;
@@ -79,6 +79,7 @@ export function formatPeriodLabel(
   }
 
   const sameMonth = from.getMonth() === to.getMonth();
+  const sameYear = from.getFullYear() === to.getFullYear();
   const fromLabel = from.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: sameMonth ? "2-digit" : "short",
@@ -86,13 +87,32 @@ export function formatPeriodLabel(
   const toLabel = to.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
-    year: from.getFullYear() !== to.getFullYear() ? "numeric" : undefined,
+    year: !sameYear ? "numeric" : undefined,
   });
   return `${fromLabel} – ${toLabel}`;
 }
 
 export function formatPeriodModeLabel(mode: FinancePeriodMode): string {
-  return mode === "week" ? "Semana" : "Mês";
+  if (mode === "week") return "Semana";
+  if (mode === "month") return "Mês";
+  return "Personalizado";
+}
+
+export function isValidPeriodRange(from: string, to: string): boolean {
+  return Boolean(from && to && from <= to);
+}
+
+export function getChartBucketMode(
+  mode: FinancePeriodMode,
+  range: FinancePeriodRange
+): "week" | "month" {
+  if (mode === "month") return "month";
+  if (mode === "week") return "week";
+  const from = parseIsoDate(range.from);
+  const to = parseIsoDate(range.to);
+  const days =
+    Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return days <= 14 ? "week" : "month";
 }
 
 /** Gera buckets diários (semana) ou semanais (mês) para gráficos */

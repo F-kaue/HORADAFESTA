@@ -45,7 +45,7 @@ import { ReportToolbar } from "@/components/finance/report-toolbar";
 import { useReportBranding } from "@/components/finance/use-report-branding";
 import { exportToExcel, exportToPdf, printReport } from "@/lib/report-export";
 import { matchesSearch } from "@/lib/search-text";
-import { formatPeriodLabel, getDefaultPeriodRange } from "@/lib/finance-period";
+import { formatPeriodLabel, getDefaultPeriodRange, isValidPeriodRange, type FinancePeriodRange } from "@/lib/finance-period";
 import { buildClientProfitRows } from "@/lib/client-profit";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -74,7 +74,7 @@ const RECEBER_CLIENT_SHEET_COLUMNS = [
 
 export default function ContasAReceberPage() {
   const branding = useReportBranding();
-  const { mode, range, setMode, setRange } = useFinancePeriod("week");
+  const { mode, range, setMode, setRange, setCustomRange } = useFinancePeriod("week");
   const [data, setData] = useState<ReceivablesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [bucket, setBucket] = useState<ReceivableBucket | "all">("all");
@@ -116,18 +116,30 @@ export default function ContasAReceberPage() {
   }, [load]);
 
   const clearFilters = () => {
-    setRange(getDefaultPeriodRange(mode));
+    setMode("week");
+    setRange(getDefaultPeriodRange("week"));
     setBucket("all");
     setEventType("all");
     setSearch("");
   };
 
+  const defaultWeekRange = getDefaultPeriodRange("week");
   const hasActiveFilters =
     Boolean(search.trim()) ||
     bucket !== "all" ||
     eventType !== "all" ||
-    range.from !== getDefaultPeriodRange(mode).from ||
-    range.to !== getDefaultPeriodRange(mode).to;
+    mode !== "week" ||
+    range.from !== defaultWeekRange.from ||
+    range.to !== defaultWeekRange.to;
+
+  const handlePeriodRangeChange = useCallback(
+    (next: FinancePeriodRange) => {
+      if (isValidPeriodRange(next.from, next.to)) {
+        setCustomRange(next.from, next.to);
+      }
+    },
+    [setCustomRange]
+  );
 
   const periodLabel = formatPeriodLabel(range, mode);
 
@@ -533,6 +545,8 @@ export default function ContasAReceberPage() {
         onClear={clearFilters}
         hasActiveFilters={hasActiveFilters}
         description="Busque por cliente e refine a lista do período selecionado"
+        periodRange={range}
+        onPeriodRangeChange={handlePeriodRangeChange}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
