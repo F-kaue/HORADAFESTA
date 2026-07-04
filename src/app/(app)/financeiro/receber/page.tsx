@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownCircle,
+  ArrowUpRight,
   Banknote,
   CheckCircle2,
   Clock,
@@ -10,6 +11,7 @@ import {
   Info,
   Plus,
   RotateCcw,
+  Sparkles,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -381,12 +383,20 @@ export default function ContasAReceberPage() {
                           value: data.receivedInPeriodTotal ?? 0,
                         },
                         {
+                          label: "Saída do período",
+                          value: data.periodPaidOut ?? 0,
+                        },
+                        {
+                          label: "Pró-labore do período",
+                          value: data.proLaboreTotal ?? 0,
+                        },
+                        {
                           label: "Recebido retido",
                           value: data.heldTotal ?? 0,
                         },
                         {
-                          label: "Resultado do período",
-                          value: data.profitInPeriodTotal ?? 0,
+                          label: "Despesas vinculadas (eventos)",
+                          value: data.expensesInPeriodTotal ?? 0,
                         },
                         {
                           label: "Total a receber (lista)",
@@ -412,6 +422,9 @@ export default function ContasAReceberPage() {
                         `A receber: ${formatCurrency(data.pendingTotal)}`,
                         `Recebido retido: ${formatCurrency(data.heldTotal)}`,
                         `Receita disponível: ${formatCurrency(data.availableTotal)}`,
+                        `Recebido no período: ${formatCurrency(data.receivedInPeriodTotal ?? 0)}`,
+                        `Saída do período: ${formatCurrency(data.periodPaidOut ?? 0)}`,
+                        `Pró-labore: ${formatCurrency(data.proLaboreTotal ?? 0)}`,
                       ]
                     : [],
                   columns,
@@ -451,20 +464,51 @@ export default function ContasAReceberPage() {
         onRangeChange={setRange}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-card to-violet-500/5 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Resumo do período
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{periodLabel}</p>
+          </div>
+          <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+            Quanto entrou dos eventos, quanto saiu em despesas pagas e o saldo
+            que sobra para o seu pró-labore.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FinanceStatCard
+            label="Recebido no período"
+            value={formatCurrency(data?.receivedInPeriodTotal ?? 0)}
+            icon={ArrowDownCircle}
+            tone="emerald"
+            hint={`Eventos com data em ${periodLabel.toLowerCase()}`}
+          />
+          <FinanceStatCard
+            label="Saída do período"
+            value={formatCurrency(data?.periodPaidOut ?? 0)}
+            icon={ArrowUpRight}
+            tone="rose"
+            hint={`Despesas pagas em ${periodLabel.toLowerCase()}`}
+          />
+          <FinanceStatCard
+            label="Pró-labore"
+            value={formatCurrency(data?.proLaboreTotal ?? 0)}
+            icon={Sparkles}
+            tone={(data?.proLaboreTotal ?? 0) >= 0 ? "violet" : "rose"}
+            hint="Recebido no período menos saídas pagas"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <FinanceStatCard
           label="Saldo disponível"
           value={formatCurrency(data?.netAvailableBalance ?? 0)}
           icon={Wallet}
           tone="emerald"
-          hint="Receita liberada menos despesas pagas"
-        />
-        <FinanceStatCard
-          label="Recebido no período"
-          value={formatCurrency(data?.receivedInPeriodTotal ?? 0)}
-          icon={ArrowDownCircle}
-          tone="emerald"
-          hint={`Eventos com data em ${periodLabel.toLowerCase()}`}
+          hint="Receita liberada menos despesas pagas (global)"
         />
         <FinanceStatCard
           label="Recebido retido"
@@ -474,11 +518,11 @@ export default function ContasAReceberPage() {
           hint="Retido dos eventos deste período"
         />
         <FinanceStatCard
-          label="Resultado do período"
-          value={formatCurrency(data?.profitInPeriodTotal ?? 0)}
+          label="A receber"
+          value={formatCurrency(data?.pendingTotal ?? 0)}
           icon={Clock}
-          tone={(data?.profitInPeriodTotal ?? 0) >= 0 ? "emerald" : "rose"}
-          hint="Recebido dos eventos menos despesas vinculadas"
+          tone="amber"
+          hint="Valores ainda não recebidos dos clientes"
         />
       </div>
 

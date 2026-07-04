@@ -189,12 +189,28 @@ export async function GET(request: NextRequest) {
     0
   );
 
+  const periodPaidOut = periodRange
+    ? (payablesRaw ?? [])
+        .filter(
+          (p) =>
+            p.status === "pago" &&
+            p.paid_date &&
+            isDateInRange(p.paid_date as string, periodRange)
+        )
+        .reduce((s, p) => s + Number(p.amount), 0)
+    : 0;
+
+  const periodBalance = receivedInPeriodTotal - periodPaidOut;
+
   return NextResponse.json({
     ...summary,
     eventTypes,
     receivedInPeriodTotal,
     expensesInPeriodTotal,
     profitInPeriodTotal: receivedInPeriodTotal - expensesInPeriodTotal,
+    periodPaidOut,
+    periodBalance,
+    proLaboreTotal: periodBalance,
     netAvailableBalance: globalSummary.availableTotal - totalPaidPayables,
     paidPayablesTotal: totalPaidPayables,
   });

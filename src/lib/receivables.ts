@@ -39,6 +39,9 @@ export type ReceivablesSummary = {
   receivedInPeriodTotal?: number;
   expensesInPeriodTotal?: number;
   profitInPeriodTotal?: number;
+  periodPaidOut?: number;
+  periodBalance?: number;
+  proLaboreTotal?: number;
   netAvailableBalance?: number;
   paidPayablesTotal?: number;
 };
