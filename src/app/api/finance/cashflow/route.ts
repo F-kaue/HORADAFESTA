@@ -239,6 +239,10 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     receivables,
+    globalContractTotal: globalReceivables.contractTotal,
+    globalReceivedTotal: globalReceivables.receivedTotal,
+    globalHeldTotal: globalReceivables.heldTotal,
+    globalPendingTotal: globalReceivables.pendingTotal,
     payables: payablesSummary,
     period: range,
     periodMode: mode,

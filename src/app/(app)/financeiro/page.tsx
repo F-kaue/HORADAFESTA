@@ -14,6 +14,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Clock,
+  FileText,
+  Lock,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -92,6 +94,10 @@ type CashflowData = {
     heldTotal: number;
     availableTotal: number;
   };
+  globalContractTotal: number;
+  globalReceivedTotal: number;
+  globalHeldTotal: number;
+  globalPendingTotal: number;
   payables: { pendingTotal: number };
   periodReceivedIn: number;
   periodPaidOut: number;
@@ -298,6 +304,23 @@ export default function FluxoDeCaixaPage() {
           icon={ArrowUpRight}
           tone="rose"
           hint={`Despesas pagas em ${periodLabel}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <FinanceStatCard
+          label="Total dos contratos"
+          value={formatCurrency(data?.globalContractTotal ?? 0)}
+          icon={FileText}
+          tone="violet"
+          hint="Valor somado de todos os contratos (geral)"
+        />
+        <FinanceStatCard
+          label="Total retido"
+          value={formatCurrency(data?.globalHeldTotal ?? 0)}
+          icon={Lock}
+          tone="sky"
+          hint="Todo o recebido ainda não liberado (geral)"
         />
       </div>
 
