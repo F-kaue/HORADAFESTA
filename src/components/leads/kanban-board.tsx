@@ -344,7 +344,19 @@ export function KanbanBoard({ className }: { className?: string }) {
         setPaymentSummaries(payData.by_lead ?? {});
       }
 
-      fetch("/api/payments/sync-calendar", { method: "POST" }).catch(() => {});
+      // Sincroniza o Google Calendar em massa no máximo 1x a cada 15 min
+      // para não estourar o limite de requisições por minuto do Google.
+      try {
+        const SYNC_KEY = "hdf:lastCalendarSync";
+        const MIN_INTERVAL_MS = 15 * 60 * 1000;
+        const last = Number(localStorage.getItem(SYNC_KEY) ?? "0");
+        if (Date.now() - last > MIN_INTERVAL_MS) {
+          localStorage.setItem(SYNC_KEY, String(Date.now()));
+          fetch("/api/payments/sync-calendar", { method: "POST" }).catch(() => {});
+        }
+      } catch {
+        fetch("/api/payments/sync-calendar", { method: "POST" }).catch(() => {});
+      }
 
       const finRes = await fetch("/api/leads/finalize-past", { method: "POST" });
       if (finRes.ok) {

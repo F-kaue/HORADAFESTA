@@ -263,7 +263,9 @@ export function LeadModal({
             : "Google Calendar atualizado."
         );
       } else if (googleCalendarError) {
-        toast.warning(`Salvo, mas calendário não atualizou: ${googleCalendarError}`);
+        toast.warning(`Informações salvas. ${googleCalendarError}`, {
+          duration: 6000,
+        });
       }
 
       onUpdate();

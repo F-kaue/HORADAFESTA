@@ -39,6 +39,48 @@ async function refreshAccessToken(
   };
 }
 
+/** Detecta erro de limite de requisições do Google (429 / quota) */
+export function isQuotaError(status: number, message?: string): boolean {
+  return (
+    status === 429 ||
+    /quota|rate.?limit|Queries per/i.test(message ?? "")
+  );
+}
+
+/** Mensagem amigável em português para erros do Google Calendar */
+export function friendlyCalendarError(status: number, rawMessage?: string): string {
+  if (isQuotaError(status, rawMessage)) {
+    return "limite de sincronizações do Google atingido por agora. As informações foram salvas e o calendário será atualizado automaticamente em instantes.";
+  }
+  return rawMessage || `Google Calendar API ${status}`;
+}
+
+/**
+ * Faz fetch na API do Google Calendar com novas tentativas em caso de
+ * limite de requisições (429) ou erro temporário (5xx), usando backoff.
+ */
+async function calendarFetch(
+  url: string,
+  init: RequestInit,
+  retries = 4
+): Promise<Response> {
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 && res.status < 500) return res;
+    if (attempt >= retries) return res;
+
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : Math.min(1000 * 2 ** attempt, 8000) + Math.floor(Math.random() * 400);
+    await new Promise((r) => setTimeout(r, wait));
+    attempt += 1;
+  }
+}
+
 function slotFromHour(hour: number): SlotType {
   if (hour < 12) return "manha";
   if (hour < 18) return "tarde";
@@ -54,7 +96,7 @@ export async function getGoogleCalendarBusyDates(
   const timeMin = new Date(startDate + "T00:00:00").toISOString();
   const timeMax = new Date(endDate + "T23:59:59").toISOString();
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/primary/events?` +
       new URLSearchParams({
         timeMin,
@@ -126,7 +168,7 @@ export async function createGoogleCalendarEvent(
 
   const calendarId = params.calendarId || "primary";
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
     {
       method: "POST",
@@ -145,14 +187,15 @@ export async function createGoogleCalendarEvent(
   );
 
   if (!res.ok) {
-    let error = `Google Calendar API ${res.status}`;
+    let rawMessage: string | undefined;
     try {
       const body = await res.json();
-      if (body?.error?.message) error = body.error.message;
+      rawMessage = body?.error?.message;
     } catch {
       // ignore parse errors
     }
-    console.error("[google-calendar] create event failed:", error);
+    const error = friendlyCalendarError(res.status, rawMessage);
+    console.error("[google-calendar] create event failed:", rawMessage ?? error);
     return { eventId: null, error };
   }
   const event = await res.json();
@@ -178,7 +221,7 @@ export async function updateGoogleCalendarEventDetails(
   const start = params.startTime.slice(0, 5);
   const end = params.endTime.slice(0, 5);
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
     {
       method: "PATCH",
@@ -203,14 +246,15 @@ export async function updateGoogleCalendarEventDetails(
   );
 
   if (!res.ok) {
-    let error = `Google Calendar API ${res.status}`;
+    let rawMessage: string | undefined;
     try {
       const body = await res.json();
-      if (body?.error?.message) error = body.error.message;
+      rawMessage = body?.error?.message;
     } catch {
       // ignore
     }
-    console.error("[google-calendar] update event failed:", error);
+    const error = friendlyCalendarError(res.status, rawMessage);
+    console.error("[google-calendar] update event failed:", rawMessage ?? error);
     return { ok: false, error };
   }
 
@@ -279,7 +323,7 @@ export async function updateGoogleCalendarFinalizedStatus(
   const tokens = await refreshAccessToken(tokenData as GoogleTokens);
   const calendarId = params.calendarId || "primary";
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
     {
       method: "PATCH",
@@ -348,7 +392,7 @@ export async function updateGoogleCalendarPaymentStatus(
     .filter(Boolean)
     .join("\n");
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}`,
     {
       method: "PATCH",
@@ -388,7 +432,7 @@ export async function listGoogleCalendarEvents(
   const tokens = await refreshAccessToken(tokenData as GoogleTokens);
   const calendarId = params.calendarId || "primary";
 
-  const res = await fetch(
+  const res = await calendarFetch(
     `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?` +
       new URLSearchParams({
         timeMin: params.timeMin,

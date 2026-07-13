@@ -22,6 +22,8 @@ export async function POST() {
   let synced = 0;
   let failed = 0;
 
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   for (const lead of leads ?? []) {
     const summary = summaries[lead.id];
     if (!summary || summary.status === "none") continue;
@@ -32,6 +34,9 @@ export async function POST() {
     } catch {
       failed++;
     }
+    // Pequeno intervalo entre atualizações para respeitar o limite
+    // de requisições por minuto do Google Calendar.
+    await wait(200);
   }
 
   return NextResponse.json({ synced, failed });
