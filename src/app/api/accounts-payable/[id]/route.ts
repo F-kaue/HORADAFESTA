@@ -4,8 +4,8 @@ import { z } from "zod";
 
 const patchSchema = z.object({
   description: z.string().min(2).optional(),
-  supplier: z.string().optional(),
-  category: z.string().optional(),
+  supplier: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
   amount: z.number().positive().optional(),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   paid_date: z.string().nullable().optional(),

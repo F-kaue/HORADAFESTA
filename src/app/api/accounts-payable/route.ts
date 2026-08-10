@@ -7,15 +7,15 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   description: z.string().min(2),
-  supplier: z.string().optional(),
-  category: z.string().default("Outro"),
+  supplier: z.string().nullable().optional(),
+  category: z.string().nullable().optional().default("Outro"),
   amount: z.number().positive(),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  paid_date: z.string().optional(),
+  paid_date: z.string().nullable().optional(),
   status: z.enum(["pendente", "pago", "cancelado"]).default("pendente"),
-  holder: z.string().optional(),
-  payment_method: z.string().optional(),
-  notes: z.string().optional(),
+  holder: z.string().nullable().optional(),
+  payment_method: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   lead_id: z.string().uuid().nullable().optional(),
 });
 
