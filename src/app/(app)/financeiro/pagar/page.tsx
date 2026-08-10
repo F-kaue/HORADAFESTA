@@ -10,6 +10,7 @@ import { LeadSelect } from "@/components/finance/lead-select";
 import { useFinancePeriod } from "@/components/finance/use-finance-period";
 import { FinanceStatCard } from "@/components/finance/finance-stat-card";
 import { PayableEditDialog } from "@/components/finance/payable-edit-dialog";
+import { PayablePayDialog } from "@/components/finance/payable-pay-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,9 +79,13 @@ export default function ContasAPagarPage() {
   const [notes, setNotes] = useState("");
   const [leadId, setLeadId] = useState("none");
   const [markPaid, setMarkPaid] = useState(false);
+  const [paidDate, setPaidDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
+  );
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [editing, setEditing] = useState<AccountPayable | null>(null);
+  const [payingItem, setPayingItem] = useState<AccountPayable | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -183,6 +188,7 @@ export default function ContasAPagarPage() {
     setNotes("");
     setLeadId("none");
     setMarkPaid(false);
+    setPaidDate(new Date().toISOString().slice(0, 10));
     setShowForm(false);
   };
 
@@ -191,6 +197,10 @@ export default function ContasAPagarPage() {
     const value = parseCurrencyBRL(amount);
     if (!description || value <= 0 || !dueDate) {
       toast.error("Preencha descrição, valor e vencimento");
+      return;
+    }
+    if (markPaid && !paidDate) {
+      toast.error("Informe a data do pagamento");
       return;
     }
     setSaving(true);
@@ -204,6 +214,7 @@ export default function ContasAPagarPage() {
         amount: value,
         due_date: dueDate,
         status: markPaid ? "pago" : "pendente",
+        paid_date: markPaid ? paidDate : undefined,
         holder: holder || undefined,
         payment_method: paymentMethod,
         notes: notes || undefined,
@@ -221,17 +232,18 @@ export default function ContasAPagarPage() {
     load();
   };
 
-  const markAsPaid = async (id: string) => {
+  const markAsPaid = async (id: string, paidOn: string) => {
     const res = await fetch(`/api/accounts-payable/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pago" }),
+      body: JSON.stringify({ status: "pago", paid_date: paidOn }),
     });
     if (!res.ok) {
       toast.error("Erro ao marcar como pago");
       return;
     }
     toast.success("Despesa paga");
+    setPayingItem(null);
     load();
   };
 
@@ -465,15 +477,36 @@ export default function ContasAPagarPage() {
                   rows={2}
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={markPaid}
-                  onChange={(e) => setMarkPaid(e.target.checked)}
-                  className="h-4 w-4 accent-primary"
-                />
-                Já foi paga
-              </label>
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={markPaid}
+                    onChange={(e) => setMarkPaid(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Já foi paga
+                </label>
+                {markPaid && (
+                  <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <Label className="text-emerald-800 dark:text-emerald-300">
+                      Data do pagamento *
+                    </Label>
+                    <Input
+                      type="date"
+                      value={paidDate}
+                      max={today}
+                      onChange={(e) => setPaidDate(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">
+                      Informe o dia em que a despesa foi realmente paga. Ela vai
+                      contar no fluxo de caixa da semana desse dia — não da semana
+                      do cadastro.
+                    </p>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2 sm:col-span-2">
                 <Button type="submit" disabled={saving}>
                   {saving ? "Salvando..." : "Salvar despesa"}
@@ -645,10 +678,10 @@ export default function ContasAPagarPage() {
                       size="sm"
                       variant="outline"
                       className="gap-1"
-                      onClick={() => markAsPaid(item.id)}
+                      onClick={() => setPayingItem(item)}
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      Pagar
+                      Dar baixa
                     </Button>
                   )}
                   <Button
@@ -671,6 +704,13 @@ export default function ContasAPagarPage() {
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
         onSaved={load}
+      />
+
+      <PayablePayDialog
+        item={payingItem}
+        open={Boolean(payingItem)}
+        onClose={() => setPayingItem(null)}
+        onConfirm={markAsPaid}
       />
 
       <ConfirmDialog
