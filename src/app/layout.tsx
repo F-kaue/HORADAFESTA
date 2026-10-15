@@ -1,14 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
+const jakarta = localFont({
+  src: [
+    { path: "../fonts/PlusJakartaSans-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/PlusJakartaSans-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/PlusJakartaSans-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/PlusJakartaSans-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-jakarta",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
