@@ -34,6 +34,7 @@ export interface Lead {
   id: string;
   name: string;
   whatsapp: string;
+  instagram: string | null;
   event_date: string | null;
   slot_type: SlotType | null;
   slot_types: SlotType[] | null;

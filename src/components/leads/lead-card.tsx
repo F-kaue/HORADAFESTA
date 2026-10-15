@@ -9,9 +9,11 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Archive,
+  AtSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate, timeAgo } from "@/lib/utils";
+import { instagramProfileUrl, formatInstagramHandle } from "@/lib/instagram";
 import { formatTimeRange } from "@/lib/event-time";
 import { formatSlotsLabel } from "@/lib/slots";
 import type { LeadPaymentSummary } from "@/lib/payment-status";
@@ -85,6 +87,7 @@ export function LeadCard({
     lead.whatsapp,
     `Olá ${lead.name}! Aqui é da Hora da Festa 🎉`
   );
+  const igUrl = instagramProfileUrl(lead.instagram);
 
   const hasActions = onArchive && onUnarchive && onFinalize && onDelete;
 
@@ -182,6 +185,18 @@ export function LeadCard({
             {lead.neighborhood}
           </p>
         )}
+        {igUrl && (
+          <a
+            href={igUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 font-semibold text-primary hover:underline"
+          >
+            <AtSign className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {formatInstagramHandle(lead.instagram)}
+          </a>
+        )}
         <p className="text-xs font-semibold text-muted-foreground">
           Chegou {timeAgo(lead.arrived_at)}
         </p>
@@ -204,6 +219,13 @@ export function LeadCard({
             <MessageCircle className="h-4 w-4" />
           </a>
         </Button>
+        {igUrl && (
+          <Button variant="secondary" size="sm" className="h-8 w-8 shrink-0 p-0" asChild>
+            <a href={igUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <AtSign className="h-4 w-4" />
+            </a>
+          </Button>
+        )}
       </div>
     </div>
   );

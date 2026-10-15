@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBusinessWhatsApp } from "@/lib/business";
+import { normalizeInstagramHandle } from "@/lib/instagram";
 import { z } from "zod";
 
 const leadSchema = z.object({
   name: z.string().min(2),
   whatsapp: z.string().min(10),
+  instagram: z.string().nullable().optional(),
   event_date: z.string().optional(),
   service_type: z.string().optional(),
   event_start_time: z.string().optional(),
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
 
   const payload = {
     ...parsed.data,
+    instagram: normalizeInstagramHandle(parsed.data.instagram),
     event_start_time: parsed.data.event_start_time?.slice(0, 5),
     event_end_time: parsed.data.event_end_time?.slice(0, 5),
     user_id: ownerId,

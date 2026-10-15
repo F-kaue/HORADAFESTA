@@ -21,6 +21,7 @@ import {
 import { GuestCountField } from "@/components/orcamento/guest-count-field";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
 import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
+import { normalizeInstagramHandle } from "@/lib/instagram";
 import { addHoursToTime } from "@/lib/event-time";
 import { EVENT_TYPES } from "@/types/database";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
   >([]);
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [startTime, setStartTime] = useState("13:00");
@@ -82,6 +84,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
   const reset = () => {
     setName("");
     setWhatsapp("");
+    setInstagram("");
     setEventDate("");
     setServiceType("");
     setStartTime("13:00");
@@ -116,6 +119,7 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
         body: JSON.stringify({
           name: name.trim(),
           whatsapp: formatWhatsApp(whatsapp),
+          instagram: normalizeInstagramHandle(instagram) || undefined,
           event_date: eventDate || undefined,
           service_type: serviceType || undefined,
           event_start_time: startTime || undefined,
@@ -172,6 +176,16 @@ export function AddLeadDialog({ open, onClose, onCreated }: AddLeadDialogProps) 
               value={whatsapp}
               onChange={(e) => setWhatsapp(maskWhatsApp(e.target.value))}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Instagram</Label>
+            <Input
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value)}
+              placeholder="@perfildocliente"
+              autoCapitalize="none"
+              autoCorrect="off"
             />
           </div>
           <div className="space-y-2">

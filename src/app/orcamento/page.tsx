@@ -52,6 +52,7 @@ export default function OrcamentoPage() {
 
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [startTime, setStartTime] = useState("13:00");
@@ -121,6 +122,7 @@ export default function OrcamentoPage() {
         body: JSON.stringify({
           name,
           whatsapp: formatWhatsApp(whatsapp),
+          instagram: instagram || undefined,
           event_date: eventDate,
           service_type: serviceType,
           event_start_time: startTime,
@@ -219,6 +221,16 @@ export default function OrcamentoPage() {
                   placeholder="(85) 99999-9999"
                   required
                   autoComplete="tel"
+                />
+              </FormField>
+              <FormField label="Instagram" hint="Opcional — seu @ para conhecermos seu perfil">
+                <Input
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  placeholder="@seuperfil"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  inputMode="text"
                 />
               </FormField>
             </div>

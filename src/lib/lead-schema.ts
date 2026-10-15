@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createLeadSchema = z.object({
   name: z.string().min(2, "Nome muito curto"),
   whatsapp: z.string().min(10, "WhatsApp inválido"),
+  instagram: z.string().nullable().optional(),
   event_date: z.string().optional(),
   service_type: z.string().optional(),
   event_start_time: z.string().optional(),

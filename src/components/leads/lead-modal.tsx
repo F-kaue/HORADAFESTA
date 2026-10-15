@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, AtSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,11 @@ import {
   formatWhatsApp,
 } from "@/lib/utils";
 import { roundMoney, splitAmount } from "@/lib/payments";
+import {
+  normalizeInstagramHandle,
+  instagramProfileUrl,
+  formatInstagramHandle,
+} from "@/lib/instagram";
 import { addHoursToTime, formatTimeRange } from "@/lib/event-time";
 import { formatSlotsLabel } from "@/lib/slots";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -83,6 +88,7 @@ export function LeadModal({
   const [displayLead, setDisplayLead] = useState<Lead | null>(null);
   const [infoName, setInfoName] = useState("");
   const [infoWhatsapp, setInfoWhatsapp] = useState("");
+  const [infoInstagram, setInfoInstagram] = useState("");
   const [infoEventDate, setInfoEventDate] = useState("");
   const [infoStartTime, setInfoStartTime] = useState("");
   const [infoEndTime, setInfoEndTime] = useState("");
@@ -105,6 +111,7 @@ export function LeadModal({
     infoEndTimeManualRef.current = !!lead.event_end_time;
     setInfoName(lead.name ?? "");
     setInfoWhatsapp(maskWhatsApp(lead.whatsapp ?? ""));
+    setInfoInstagram(formatInstagramHandle(lead.instagram) ?? "");
     setInfoEventDate(lead.event_date ?? "");
     setInfoStartTime(lead.event_start_time?.slice(0, 5) ?? "");
     setInfoEndTime(lead.event_end_time?.slice(0, 5) ?? "");
@@ -142,6 +149,7 @@ export function LeadModal({
     initialTab,
     lead?.name,
     lead?.whatsapp,
+    lead?.instagram,
     lead?.total_value,
     lead?.internal_notes,
     lead?.event_date,
@@ -229,6 +237,7 @@ export function LeadModal({
         body: JSON.stringify({
           name: infoName.trim(),
           whatsapp: formatWhatsApp(infoWhatsapp),
+          instagram: normalizeInstagramHandle(infoInstagram),
           event_date: infoEventDate || null,
           event_start_time: infoStartTime || null,
           event_end_time: infoEndTime || null,
@@ -376,6 +385,27 @@ export function LeadModal({
                     onChange={(e) => setInfoWhatsapp(maskWhatsApp(e.target.value))}
                     placeholder="(85) 99999-9999"
                   />
+                </div>
+                <div>
+                  <Label>Instagram</Label>
+                  <Input
+                    value={infoInstagram}
+                    onChange={(e) => setInfoInstagram(e.target.value)}
+                    placeholder="@perfildocliente"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                  {instagramProfileUrl(infoInstagram) && (
+                    <a
+                      href={instagramProfileUrl(infoInstagram) as string}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <AtSign className="h-3.5 w-3.5" aria-hidden />
+                      Abrir {formatInstagramHandle(infoInstagram)}
+                    </a>
+                  )}
                 </div>
                 <div>
                   <Label>Data do evento</Label>
