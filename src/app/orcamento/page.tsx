@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Check, Copy, MessageCircle, Sparkles } from "lucide-react";
 import { BrandLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,10 @@ import {
 } from "@/components/ui/select";
 import { GuestCountField } from "@/components/orcamento/guest-count-field";
 import { AvailabilityCalendar } from "@/components/orcamento/availability-calendar";
-import { maskWhatsApp, formatWhatsApp } from "@/lib/utils";
+import { formatDate, maskWhatsApp, formatWhatsApp } from "@/lib/utils";
+import { formatInstagramHandle } from "@/lib/instagram";
 import { buildOrcamentoMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
-import { addHoursToTime } from "@/lib/event-time";
+import { addHoursToTime, formatTimeRange } from "@/lib/event-time";
 import { EVENT_TYPES } from "@/types/database";
 import { toast } from "sonner";
 
@@ -45,6 +46,9 @@ function FormField({
 
 export default function OrcamentoPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [waUrl, setWaUrl] = useState("");
+  const [waMessage, setWaMessage] = useState("");
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [eventTypes, setEventTypes] = useState<CatalogEvent[]>([]);
@@ -143,6 +147,8 @@ export default function OrcamentoPage() {
 
       const message = buildOrcamentoMessage({
         name,
+        whatsapp,
+        instagram,
         eventDate,
         startTime,
         endTime,
@@ -154,9 +160,11 @@ export default function OrcamentoPage() {
         observations,
       });
 
-      const waUrl = buildWhatsAppUrl(data.whatsapp, message);
+      const url = buildWhatsAppUrl(data.whatsapp, message);
+      setWaMessage(message);
+      setWaUrl(url);
       setSubmitted(true);
-      window.location.href = waUrl;
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       toast.error("Erro de conexão. Tente novamente.");
     } finally {
@@ -164,20 +172,127 @@ export default function OrcamentoPage() {
     }
   };
 
+  const copySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(waMessage);
+      setCopied(true);
+      toast.success("Resumo copiado. Cole no WhatsApp da Hora da Festa.");
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      toast.error("Não foi possível copiar. Toque no botão verde do WhatsApp.");
+    }
+  };
+
   if (submitted) {
+    const instagramHandle = formatInstagramHandle(instagram);
+    const timeRange = formatTimeRange(startTime, endTime);
+    const summaryRows = [
+      { label: "Nome", value: name },
+      { label: "WhatsApp", value: whatsapp },
+      ...(instagramHandle ? [{ label: "Instagram", value: instagramHandle }] : []),
+      {
+        label: "Data",
+        value: `${formatDate(eventDate)}${timeRange ? ` · ${timeRange}` : ""}`,
+      },
+      { label: "Tipo", value: eventType },
+      { label: "Serviço", value: serviceType },
+      { label: "Local", value: `${location} — ${neighborhood}` },
+      { label: "Convidados", value: `~${guestCount} pessoas` },
+      ...(observations.trim()
+        ? [{ label: "Observações", value: observations.trim() }]
+        : []),
+    ];
+
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-white px-4 py-10 safe-bottom">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-elevated sm:p-10">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-3xl">
-            ✓
-          </div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            Solicitação enviada!
-          </h1>
-          <p className="mt-3 text-readable text-muted-foreground">
-            Em breve entraremos em contato. Se o WhatsApp não abriu, verifique se o
-            aplicativo está instalado no seu celular.
+      <div className="min-h-[100dvh] bg-white">
+        <div className="mx-auto w-full max-w-xl px-4 py-6 pb-10 sm:px-6 sm:py-10">
+          <header className="mb-6 text-center">
+            <div className="mx-auto mb-4 flex justify-center">
+              <BrandLogo size="lg" />
+            </div>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-3xl">
+              ✓
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Pedido registrado!
+            </h1>
+            <p className="mx-auto mt-3 max-w-sm text-readable text-muted-foreground">
+              Falta um último passo: envie o resumo no WhatsApp da Hora da Festa
+              para confirmarmos o orçamento.
+            </p>
+          </header>
+
+          <ol className="mb-5 space-y-2 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm font-medium text-foreground">
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                1
+              </span>
+              Toque no botão verde abaixo
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                2
+              </span>
+              O WhatsApp abre com o resumo já escrito
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                3
+              </span>
+              Toque em <strong>Enviar</strong> na conversa
+            </li>
+          </ol>
+
+          <section className="form-section mb-5">
+            <p className="form-section-title mb-3">Resumo do seu evento</p>
+            <dl className="space-y-3">
+              {summaryRows.map((row) => (
+                <div
+                  key={row.label}
+                  className="grid gap-1 border-b border-border/60 pb-3 last:border-0 last:pb-0 sm:grid-cols-[140px_1fr] sm:gap-3"
+                >
+                  <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {row.label}
+                  </dt>
+                  <dd className="text-sm font-semibold text-foreground">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl bg-[#25D366] px-6 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-[#1ebe57] active:scale-[0.98]"
+          >
+            <MessageCircle className="h-6 w-6 shrink-0" aria-hidden />
+            Enviar resumo no WhatsApp
+          </a>
+          <p className="mt-3 text-center text-sm font-semibold text-foreground">
+            Sem esse envio, a equipe ainda não recebe o resumo no WhatsApp.
           </p>
+          <p className="mt-1 text-center text-xs text-muted-foreground">
+            No celular abre o aplicativo. No computador, o WhatsApp Web.
+          </p>
+
+          <button
+            type="button"
+            onClick={copySummary}
+            className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-semibold text-primary hover:underline"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" aria-hidden />
+                Resumo copiado
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" aria-hidden />
+                Copiar resumo (se o WhatsApp não abrir)
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
@@ -341,10 +456,10 @@ export default function OrcamentoPage() {
           <div className="sticky bottom-0 -mx-4 border-t border-border/80 bg-white/95 px-4 py-4 backdrop-blur-md safe-bottom sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
             <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
               <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
-              {loading ? "Enviando..." : "Solicitar orçamento no WhatsApp"}
+              {loading ? "Registrando..." : "Continuar para o WhatsApp"}
             </Button>
             <p className="mt-2 text-center text-2xs font-medium text-muted-foreground sm:text-xs">
-              Ao enviar, você será redirecionado(a) para o WhatsApp da equipe.
+              Na próxima tela você envia o resumo no WhatsApp da Hora da Festa.
             </p>
           </div>
         </form>
