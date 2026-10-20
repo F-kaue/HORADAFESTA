@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/site/HeroSection";
+import { ClipReel } from "@/components/site/ClipReel";
 import { ServicesSection } from "@/components/site/ServicesSection";
 import { FoodRail } from "@/components/site/FoodRail";
 import { WhyUsSection } from "@/components/site/WhyUsSection";
@@ -18,6 +19,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <ClipReel />
       <ServicesSection />
       <FoodRail />
       <WhyUsSection />

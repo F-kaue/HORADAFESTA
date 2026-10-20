@@ -11,9 +11,7 @@ export function GallerySection({ compact = false }: { compact?: boolean }) {
         <div className="mx-auto flex max-w-6xl items-end justify-between gap-4 px-5 sm:px-8">
           <div>
             <h2 className="text-3xl font-bold text-white sm:text-4xl">Fotos dos eventos</h2>
-            <p className="mt-2 max-w-md text-sm text-white/70">
-              Registros da casa. Os vídeos editados entram quando a social media entregar.
-            </p>
+            <p className="mt-2 max-w-md text-sm text-white/70">Registros da casa.</p>
           </div>
           <Link href="/galeria" className="shrink-0 text-sm font-semibold text-white underline-offset-4 hover:underline">
             Galeria

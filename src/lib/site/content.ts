@@ -20,7 +20,7 @@ export const SERVICES = [
     alt: "Estação de madeira da Hora da Festa com salgados, mini pizzas e luminárias",
     lead: "A estrutura de madeira chega montada. O salgado sai na hora, na sua festa.",
     note: "Garçom não entra neste pacote. Se precisar de serviço de mesa, a gente combina à parte.",
-    items: ["Mini hambúrguer, mini pizza, churros e pipoca", "Bowls, molhos, palitos e guardanapos", "Montagem e desmontagem da estação"],
+    items: ["Mini hambúrguer, mini pizza, churros, pipoca e algodão doce", "Bowls, molhos, palitos e guardanapos", "Montagem e desmontagem da estação"],
   },
   {
     title: "Refeição completa",
@@ -37,6 +37,39 @@ export const SERVICES = [
     lead: "A mesa doce entra junto quando o evento pede o final açucarado.",
     note: "O cardápio fecha no orçamento, pelo número de convidados.",
     items: ["Canudinho, empada e bolo", "Montagem da mesa", "O que for contratado já vai com o material de servir"],
+  },
+] as const;
+
+export const CLIPS = [
+  {
+    src: "/videos/site/barraquinha.mp4",
+    poster: "/images/site/posters/barraquinha.jpg",
+    caption: "Na barraquinha",
+    alt: "Convidada comendo na barraquinha da Hora da Festa, com a equipe ao fundo",
+  },
+  {
+    src: "/videos/site/algodao.mp4",
+    poster: "/images/site/posters/algodao.jpg",
+    caption: "Algodão doce",
+    alt: "Algodão doce sendo enrolado na estação",
+  },
+  {
+    src: "/videos/site/churros.mp4",
+    poster: "/images/site/posters/churros.jpg",
+    caption: "Churros",
+    alt: "Churros na estação de madeira",
+  },
+  {
+    src: "/videos/site/hamburguer.mp4",
+    poster: "/images/site/posters/hamburguer.jpg",
+    caption: "Mini hambúrguer",
+    alt: "Mini hambúrguer montado na hora",
+  },
+  {
+    src: "/videos/site/crepe.mp4",
+    poster: "/images/site/posters/crepe.jpg",
+    caption: "Na chapa",
+    alt: "Salgado gratinando na chapa",
   },
 ] as const;
 
