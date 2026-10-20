@@ -1,6 +1,20 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { whatsAppHref } from "@/lib/site/content";
 
 export function FloatingWhatsApp() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 320);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!show) return null;
+
   return (
     <a
       href={whatsAppHref()}

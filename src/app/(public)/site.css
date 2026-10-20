@@ -22,6 +22,25 @@
   scroll-snap-align: start;
 }
 
+.hero-photo {
+  animation: hero-photo-in 0.9s ease-out both;
+}
+
+@keyframes hero-photo-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo {
+    animation: none;
+  }
+}
+
 .site-theme h1,
 .site-theme h2,
 .site-theme h3,
