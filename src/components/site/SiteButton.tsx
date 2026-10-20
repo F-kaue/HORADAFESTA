@@ -5,10 +5,10 @@ type Variant = "primary" | "ghost" | "white" | "outline-white";
 
 const styles: Record<Variant, string> = {
   primary:
-    "bg-[#E8612C] text-white hover:bg-[#d45626] shadow-[0_8px_32px_rgba(232,97,44,0.35)]",
+    "bg-[#ee5f98] text-white hover:bg-[#d44d84]",
   ghost:
-    "border-2 border-white/80 bg-transparent text-white hover:bg-white/10",
-  white: "bg-white text-[#E8612C] hover:bg-[#FFF8F3] shadow-lg",
+    "border border-white/70 bg-transparent text-white hover:bg-white/10",
+  white: "bg-white text-[#2a211c] hover:bg-[#f3ebe3]",
   "outline-white":
     "border-2 border-white bg-transparent text-white hover:bg-white/10",
 };

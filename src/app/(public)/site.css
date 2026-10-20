@@ -1,16 +1,63 @@
 .site-theme {
-  --hdf-primary: #e8612c;
-  --hdf-secondary: #1a1a2e;
-  --hdf-accent: #f9c846;
-  --hdf-surface: #fff8f3;
-  background-color: var(--hdf-surface);
-  color: var(--hdf-secondary);
+  --hdf-ink: #1c1412;
+  --hdf-paper: #fffaf6;
+  --hdf-sand: #f6ece4;
+  --hdf-pink: #ee5f98;
+  --hdf-mint: #5fd0c6;
+  --hdf-wood: #8a5a32;
+  background: var(--hdf-paper);
+  color: var(--hdf-ink);
+}
+
+.site-rail {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.site-rail figure {
+  scroll-snap-align: start;
 }
 
 .site-theme h1,
 .site-theme h2,
-.site-theme h3 {
-  font-family: var(--font-playfair), Georgia, serif;
+.site-theme h3,
+.site-theme h4 {
+  color: inherit;
+  font-family: var(--font-jakarta), "Plus Jakarta Sans", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.site-film {
+  display: flex;
+  width: max-content;
+  gap: 0.75rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-film-track {
+    overflow: hidden;
+  }
+
+  .site-film {
+    animation: site-film 48s linear infinite;
+  }
+
+  .site-film-track:hover .site-film {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes site-film {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 @keyframes accordion-down {

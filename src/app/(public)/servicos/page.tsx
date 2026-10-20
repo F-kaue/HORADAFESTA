@@ -1,27 +1,29 @@
 import type { Metadata } from "next";
 import { ServicesSection } from "@/components/site/ServicesSection";
+import { WhyUsSection } from "@/components/site/WhyUsSection";
+import { HouseNotes } from "@/components/site/HouseNotes";
 import { CTASection } from "@/components/site/CTASection";
 
 export const metadata: Metadata = {
   title: "Serviços",
   description:
-    "Buffet móvel, barraquinhas, festas infantis, eventos corporativos e celebrações completas em Caucaia e região.",
+    "Barraquinhas, estações, refeição completa e mesa de doces. Comida feita na hora do evento.",
 };
 
 export default function ServicosPage() {
   return (
     <>
-      <section className="bg-[#1A1A2E] py-24 pt-32 text-white">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-          <h1 className="font-[family-name:var(--font-playfair)] text-4xl font-bold sm:text-5xl">
-            Nossos serviços
-          </h1>
-          <p className="mt-4 text-lg text-white/80">
-            Estrutura completa, equipe e sabor — levamos tudo até o local do seu evento.
+      <section className="bg-[#1c1412] px-5 pb-16 pt-32 text-white sm:px-8">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="text-4xl font-bold sm:text-5xl">Serviços</h1>
+          <p className="mt-4 max-w-xl text-lg text-white/75">
+            Barraquinha, estação ou refeição completa. O que muda é o cardápio e se o garçom entra no pacote.
           </p>
         </div>
       </section>
       <ServicesSection showAllLink={false} />
+      <WhyUsSection />
+      <HouseNotes />
       <CTASection />
     </>
   );

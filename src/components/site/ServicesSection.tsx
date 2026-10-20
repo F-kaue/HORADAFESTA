@@ -1,46 +1,71 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { SERVICES } from "@/lib/site/content";
-import { AnimatedSection } from "./AnimatedSection";
 
 export function ServicesSection({ showAllLink = true }: { showAllLink?: boolean }) {
-  return (
-    <section id="servicos" className="bg-[#FFF8F3] py-16 md:py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <AnimatedSection className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8612C]">O que fazemos</p>
-          <h2 className="mt-2 font-[family-name:var(--font-playfair)] text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
-            Nossos serviços
-          </h2>
-          <p className="mt-4 text-lg text-[#6B7280]">
-            Buffet móvel com estrutura completa — levamos a festa até você em Caucaia e região.
-          </p>
-        </AnimatedSection>
+  const [lead, ...rest] = SERVICES;
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service, i) => (
-            <AnimatedSection key={service.title} delay={i * 0.1}>
-              <div className="group h-full rounded-2xl border border-[#E8612C]/10 bg-white p-6 shadow-[0_8px_32px_rgba(232,97,44,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(232,97,44,0.15)]">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8612C]/10 text-[#E8612C]">
-                  <service.icon className="h-7 w-7" />
-                </div>
-                <h3 className="mt-4 font-[family-name:var(--font-playfair)] text-xl font-bold text-[#1A1A2E]">
-                  {service.title}
-                </h3>
-                <p className="mt-2 text-[#6B7280] leading-relaxed">{service.description}</p>
-                {showAllLink && (
-                  <Link
-                    href="/servicos"
-                    className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#E8612C] group-hover:gap-2 transition-all"
-                  >
-                    Saiba mais <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
+  return (
+    <section id="servicos" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
+      <div className="max-w-xl">
+        <h2 className="text-3xl font-bold sm:text-4xl">O que a gente leva</h2>
+        <p className="mt-3 text-base leading-relaxed text-[#5c5148]">
+          Estação, refeição ou mesa de doces. O cardápio fecha no orçamento, pelo
+          número de convidados.
+        </p>
+      </div>
+
+      <div className="mt-10 grid gap-8 lg:grid-cols-12">
+        <article className="lg:col-span-7">
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#f6ece4] sm:aspect-[5/4]">
+            <Image
+              src={lead.image}
+              alt={lead.alt}
+              fill
+              className="object-cover"
+              sizes="(min-width: 1024px) 58vw, 100vw"
+            />
+          </div>
+          <h3 className="mt-4 text-2xl font-bold">{lead.title}</h3>
+          <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-[#5c5148]">{lead.lead}</p>
+          <ul className="mt-4 space-y-1.5 text-sm">
+            {lead.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm font-semibold text-[#9a3d62]">{lead.note}</p>
+        </article>
+
+        <div className="grid gap-8 lg:col-span-5">
+          {rest.map((service) => (
+            <article key={service.title}>
+              <div className="relative aspect-[16/10] overflow-hidden bg-[#f6ece4]">
+                <Image
+                  src={service.image}
+                  alt={service.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 36vw, 100vw"
+                />
               </div>
-            </AnimatedSection>
+              <h3 className="mt-4 text-2xl font-bold">{service.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-[#5c5148]">{service.lead}</p>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {service.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-sm font-semibold text-[#9a3d62]">{service.note}</p>
+            </article>
           ))}
         </div>
       </div>
+
+      {showAllLink && (
+        <Link href="/servicos" className="mt-10 inline-block text-sm font-semibold text-[#ee5f98] underline-offset-4 hover:underline">
+          Ver o detalhe de cada pacote
+        </Link>
+      )}
     </section>
   );
 }

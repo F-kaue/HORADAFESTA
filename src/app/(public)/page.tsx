@@ -1,32 +1,30 @@
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
 import { HeroSection } from "@/components/site/HeroSection";
-import { StatsSection } from "@/components/site/StatsSection";
 import { ServicesSection } from "@/components/site/ServicesSection";
+import { FoodRail } from "@/components/site/FoodRail";
 import { WhyUsSection } from "@/components/site/WhyUsSection";
-import { CTASection } from "@/components/site/CTASection";
+import { GallerySection } from "@/components/site/GallerySection";
+import { HouseNotes } from "@/components/site/HouseNotes";
 import { FAQSection } from "@/components/site/FAQSection";
+import { CTASection } from "@/components/site/CTASection";
 
-const GallerySection = dynamic(
-  () => import("@/components/site/GallerySection").then((m) => m.GallerySection),
-  { ssr: true }
-);
-
-const TestimonialsSection = dynamic(
-  () => import("@/components/site/TestimonialsSection").then((m) => m.TestimonialsSection),
-  { ssr: true }
-);
+export const metadata: Metadata = {
+  title: { absolute: "Hora da Festa | Buffet móvel em Caucaia e Fortaleza" },
+  description:
+    "Barraquinhas, estações e refeição completa. A comida é frita, assada e montada na hora do evento, em Caucaia, Fortaleza e região.",
+};
 
 export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <StatsSection />
       <ServicesSection />
-      <GallerySection compact />
-      <TestimonialsSection />
+      <FoodRail />
       <WhyUsSection />
-      <CTASection />
+      <GallerySection compact />
+      <HouseNotes />
       <FAQSection />
+      <CTASection />
     </>
   );
 }

@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils";
 import { SiteButton } from "./SiteButton";
 
 const NAV = [
-  { href: "/", label: "Home" },
   { href: "/servicos", label: "Serviços" },
   { href: "/galeria", label: "Galeria" },
   { href: "/sobre", label: "Sobre" },
-  { href: "/contato", label: "Contato" },
+  { href: "/#duvidas", label: "Dúvidas" },
+  { href: "/#atendimento", label: "Onde vamos" },
 ];
 
 export function SiteHeader() {
@@ -43,10 +43,10 @@ export function SiteHeader() {
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-300",
           scrolled
-            ? "border-b border-[#E8612C]/10 bg-white/95 shadow-[0_4px_24px_rgba(26,26,46,0.08)] backdrop-blur-md"
+            ? "border-b border-[#1c1412]/10 bg-[#fffaf6]/95 shadow-[0_4px_24px_rgba(28,20,18,0.08)] backdrop-blur-md"
             : isHome
               ? "bg-transparent"
-              : "border-b border-[#E8612C]/10 bg-white/95 shadow-sm"
+              : "border-b border-[#1c1412]/10 bg-[#fffaf6]/95 shadow-sm"
         )}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:h-[72px] sm:px-6 lg:px-8">
@@ -62,8 +62,8 @@ export function SiteHeader() {
             <div className="hidden sm:block">
               <p
                 className={cn(
-                  "font-[family-name:var(--font-playfair)] text-base font-bold leading-tight",
-                  light ? "text-[#1A1A2E]" : "text-white"
+                  "text-base font-bold leading-tight",
+                  light ? "text-[#2a211c]" : "text-white"
                 )}
               >
                 Hora da Festa
@@ -85,8 +85,8 @@ export function SiteHeader() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "text-sm font-semibold transition-colors hover:text-[#E8612C]",
-                  light ? "text-[#1A1A2E]" : "text-white/90"
+                  "text-sm font-semibold transition-colors hover:text-[#ee5f98]",
+                  light ? "text-[#1c1412]" : "text-white/90"
                 )}
               >
                 {item.label}
@@ -100,13 +100,13 @@ export function SiteHeader() {
               variant="primary"
               className="hidden !min-h-[40px] !px-5 !py-2 text-sm sm:inline-flex"
             >
-              Solicitar Orçamento
+              Orçamento
             </SiteButton>
             <Link
               href="/login"
               aria-label="Acesso ao sistema"
               className={cn(
-                "hidden rounded-lg p-2 transition-colors hover:text-[#E8612C] sm:block",
+                "hidden rounded-lg p-2 transition-colors hover:text-[#ee5f98] sm:block",
                 light ? "text-[#9CA3AF]" : "text-white/50"
               )}
             >
@@ -116,7 +116,7 @@ export function SiteHeader() {
               type="button"
               className={cn(
                 "rounded-xl p-2.5 lg:hidden",
-                light ? "text-[#1A1A2E]" : "text-white"
+                light ? "text-[#1c1412]" : "text-white"
               )}
               onClick={() => setOpen(true)}
               aria-label="Abrir menu"
@@ -134,7 +134,7 @@ export function SiteHeader() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-[#1A1A2E]/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[60] bg-[#1c1412]/60 backdrop-blur-sm lg:hidden"
               onClick={() => setOpen(false)}
             />
             <motion.aside
@@ -142,16 +142,14 @@ export function SiteHeader() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              className="fixed inset-y-0 right-0 z-[70] flex w-[min(100%,320px)] flex-col bg-[#FFF8F3] shadow-2xl lg:hidden"
+              className="fixed inset-y-0 right-0 z-[70] flex w-[min(100%,320px)] flex-col bg-[#fffdf8] shadow-2xl lg:hidden"
             >
-              <div className="flex items-center justify-between border-b border-[#E8612C]/15 p-4">
-                <span className="font-[family-name:var(--font-playfair)] text-lg font-bold text-[#1A1A2E]">
-                  Menu
-                </span>
+              <div className="flex items-center justify-between border-b border-[#1c1412]/10 p-4">
+                <span className="text-lg font-bold text-[#2a211c]">Menu</span>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl p-2 text-[#1A1A2E]"
+                  className="rounded-xl p-2 text-[#1c1412]"
                   aria-label="Fechar menu"
                 >
                   <X className="h-6 w-6" />
@@ -163,7 +161,7 @@ export function SiteHeader() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="min-h-[48px] rounded-xl px-4 py-3 text-lg font-semibold text-[#1A1A2E] hover:bg-[#E8612C]/10"
+                    className="min-h-[48px] rounded-xl px-4 py-3 text-lg font-semibold text-[#1c1412] hover:bg-[#ee5f98]/10"
                   >
                     {item.label}
                   </Link>
@@ -177,9 +175,9 @@ export function SiteHeader() {
                   Acesso ao sistema
                 </Link>
               </nav>
-              <div className="border-t border-[#E8612C]/15 p-4">
+              <div className="border-t border-[#1c1412]/10 p-4">
                 <SiteButton href="/orcamento" className="w-full">
-                  Solicitar Orçamento
+                  Orçamento
                 </SiteButton>
               </div>
             </motion.aside>
