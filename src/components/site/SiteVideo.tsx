@@ -1,23 +1,40 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
+/**
+ * Vídeo leve do site: só baixa e decodifica quando `active`.
+ * Fora de foco fica no poster — evita travar a home com vários MP4 juntos.
+ */
 export function SiteVideo({
   src,
   poster,
   label,
   className,
+  active = false,
 }: {
   src: string;
   poster: string;
   label: string;
   className?: string;
+  active?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!active || reduce) {
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+      setReady(false);
+      return;
+    }
 
     el.muted = true;
     el.defaultMuted = true;
@@ -26,56 +43,61 @@ export function SiteVideo({
     el.setAttribute("playsinline", "");
     el.setAttribute("webkit-playsinline", "");
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
+    if (el.getAttribute("src") !== src) {
+      el.src = src;
+      el.load();
+    }
+
+    let cancelled = false;
 
     const tryPlay = () => {
+      if (cancelled) return;
       const play = el.play();
       if (play && typeof play.catch === "function") {
         play.catch(() => {});
       }
     };
 
-    const onVisible = (visible: boolean) => {
-      if (visible) tryPlay();
-      else el.pause();
+    const onCanPlay = () => {
+      setReady(true);
+      tryPlay();
     };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => onVisible(entry.isIntersecting && entry.intersectionRatio >= 0.35),
-      { threshold: [0, 0.35, 0.6] }
-    );
-    observer.observe(el);
-
-    el.addEventListener("loadeddata", tryPlay);
-    el.addEventListener("canplay", tryPlay);
-
-    const unlock = () => tryPlay();
-    window.addEventListener("touchstart", unlock, { once: true, passive: true });
-    window.addEventListener("scroll", unlock, { once: true, passive: true });
+    el.addEventListener("canplay", onCanPlay);
+    el.addEventListener("loadeddata", onCanPlay);
+    tryPlay();
 
     return () => {
-      observer.disconnect();
-      el.removeEventListener("loadeddata", tryPlay);
-      el.removeEventListener("canplay", tryPlay);
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("scroll", unlock);
+      cancelled = true;
+      el.removeEventListener("canplay", onCanPlay);
+      el.removeEventListener("loadeddata", onCanPlay);
+      el.pause();
     };
-  }, [src]);
+  }, [active, src]);
 
   return (
-    <video
-      ref={ref}
-      className={className}
-      poster={poster}
-      muted
-      loop
-      playsInline
-      autoPlay
-      preload="metadata"
-      aria-label={label}
-    >
-      <source src={`${src}#t=0.001`} type="video/mp4" />
-    </video>
+    <div className={`relative overflow-hidden bg-[#2a211c] ${className ?? ""}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={poster}
+        alt=""
+        aria-hidden
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+          active && ready ? "opacity-0" : "opacity-100"
+        }`}
+      />
+      <video
+        ref={ref}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+          active && ready ? "opacity-100" : "opacity-0"
+        }`}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={label}
+      />
+    </div>
   );
 }
