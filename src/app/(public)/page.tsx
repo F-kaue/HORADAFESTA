@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { HeroSection } from "@/components/site/HeroSection";
 import { AboutSection } from "@/components/site/AboutSection";
 import { StallsSection } from "@/components/site/StallsSection";
+import { ClipReel } from "@/components/site/ClipReel";
 import { ServicesSection } from "@/components/site/ServicesSection";
 import { BuffetSection } from "@/components/site/BuffetSection";
 import { FoodRail } from "@/components/site/FoodRail";
@@ -24,6 +25,7 @@ export default function HomePage() {
       <HeroSection />
       <AboutSection />
       <StallsSection />
+      <ClipReel />
       <ServicesSection />
       <BuffetSection />
       <FoodRail />

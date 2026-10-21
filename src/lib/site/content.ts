@@ -52,6 +52,39 @@ export const SERVICES = [
   },
 ] as const;
 
+export const CLIPS = [
+  {
+    src: "/videos/site/barraquinha.mp4",
+    poster: "/images/site/posters/barraquinha.jpg",
+    caption: "Na barraquinha",
+    alt: "Convidada comendo na barraquinha da Hora da Festa, com a equipe ao fundo",
+  },
+  {
+    src: "/videos/site/algodao.mp4",
+    poster: "/images/site/posters/algodao.jpg",
+    caption: "Algodão doce",
+    alt: "Algodão doce sendo enrolado na estação",
+  },
+  {
+    src: "/videos/site/churros.mp4",
+    poster: "/images/site/posters/churros.jpg",
+    caption: "Churros",
+    alt: "Churros na estação de madeira",
+  },
+  {
+    src: "/videos/site/hamburguer.mp4",
+    poster: "/images/site/posters/hamburguer.jpg",
+    caption: "Mini hambúrguer",
+    alt: "Mini hambúrguer montado na hora",
+  },
+  {
+    src: "/videos/site/crepe.mp4",
+    poster: "/images/site/posters/crepe.jpg",
+    caption: "Na chapa",
+    alt: "Salgado gratinando na chapa",
+  },
+] as const;
+
 export const STALL_PHOTOS = [
   {
     src: "/images/site/stalls-day.jpg",

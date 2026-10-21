@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClipReel } from "@/components/site/ClipReel";
 import { GallerySection } from "@/components/site/GallerySection";
 import { CTASection } from "@/components/site/CTASection";
 
@@ -18,6 +19,7 @@ export default function GaleriaPage() {
           </p>
         </div>
       </section>
+      <ClipReel />
       <GallerySection />
       <CTASection />
     </>
