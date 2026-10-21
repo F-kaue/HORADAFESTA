@@ -187,19 +187,24 @@ export const GALLERY = [
 
 export const FEEDBACK = [
   {
-    quote:
-      "Você é maravilhosa como pessoa e como profissional. Faz um trabalho impecável. Estava tudo muito delicioso.",
-    source: "Cliente no WhatsApp",
+    src: "/images/site/feedback-1.jpg",
+    alt: "Print de feedback de cliente da Hora da Festa",
   },
   {
-    quote:
-      "Estava uma delícia. Tudo perfeito, de primeira qualidade. Ano que vem vai ser tudo por sua conta.",
-    source: "Marina",
+    src: "/images/site/feedback-2.jpg",
+    alt: "Print de feedback de cliente no WhatsApp",
   },
   {
-    quote:
-      "Simpatia, indicações e o sabor no ponto. A festa ganhou outro clima com a Hora da Festa.",
-    source: "Cliente no WhatsApp",
+    src: "/images/site/feedback-3.jpg",
+    alt: "Print de avaliação após o evento",
+  },
+  {
+    src: "/images/site/feedback-4.jpg",
+    alt: "Print de mensagem de cliente satisfeito",
+  },
+  {
+    src: "/images/site/feedback-5.jpg",
+    alt: "Print de feedback que a casa ama",
   },
 ] as const;
 
