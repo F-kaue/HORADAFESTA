@@ -16,19 +16,27 @@ export const SITE = {
 export const SERVICES = [
   {
     title: "Barraquinhas e estações",
-    image: "/images/site/mesa-2.jpg",
-    alt: "Estação de madeira da Hora da Festa com salgados, mini pizzas e luminárias",
-    lead: "A estrutura de madeira chega montada. O salgado sai na hora, na sua festa.",
+    image: "/images/site/stalls-day.jpg",
+    alt: "Barraquinhas de madeira da Hora da Festa ao ar livre, com luminárias e equipe",
+    lead: "A estrutura de madeira chega montada e vira atrativo do salão.",
     note: "Garçom não entra neste pacote. Se precisar de serviço de mesa, a gente combina à parte.",
-    items: ["Mini hambúrguer, mini pizza, churros, pipoca e algodão doce", "Bowls, molhos, palitos e guardanapos", "Montagem e desmontagem da estação"],
+    items: [
+      "Mini hambúrguer, mini pizza, churros, pipoca e algodão doce",
+      "Bowls, molhos, palitos e guardanapos",
+      "Montagem e desmontagem da estação",
+    ],
   },
   {
-    title: "Refeição completa",
-    image: "/images/site/refeicao.jpg",
-    alt: "Buffet sendo servido no evento, com a equipe montando o prato",
-    lead: "Almoço ou jantar servido quente, com a equipe que já vem no pacote.",
+    title: "Buffet completo",
+    image: "/images/site/mesa-buffet.jpg",
+    alt: "Mesa de refeição completa com arroz, carnes e saladas",
+    lead: "Refeições completas, cardápio variado e apresentação impecável.",
     note: "Neste pacote o garçom está incluso.",
-    items: ["Comida feita e finalizada no evento", "Serviço de mesa incluso", "Estrutura e equipe no local"],
+    items: [
+      "Comida feita e finalizada no evento",
+      "Garçons, copeiras e estrutura",
+      "Atendimento personalizado do começo ao fim",
+    ],
   },
   {
     title: "Mesa de doces",
@@ -36,66 +44,130 @@ export const SERVICES = [
     alt: "Mesa com canudinhos, empadas e bolo",
     lead: "A mesa doce entra junto quando o evento pede o final açucarado.",
     note: "O cardápio fecha no orçamento, pelo número de convidados.",
-    items: ["Canudinho, empada e bolo", "Montagem da mesa", "O que for contratado já vai com o material de servir"],
+    items: [
+      "Canudinho, empada e bolo",
+      "Montagem da mesa",
+      "O que for contratado já vai com o material de servir",
+    ],
   },
 ] as const;
 
-export const CLIPS = [
+export const STALL_PHOTOS = [
   {
-    src: "/videos/site/barraquinha.mp4",
-    poster: "/images/site/posters/barraquinha.jpg",
-    caption: "Na barraquinha",
-    alt: "Convidada comendo na barraquinha da Hora da Festa, com a equipe ao fundo",
+    src: "/images/site/stalls-day.jpg",
+    alt: "Duas barraquinhas de madeira com luminárias, no jardim",
   },
   {
-    src: "/videos/site/algodao.mp4",
-    poster: "/images/site/posters/algodao.jpg",
-    caption: "Algodão doce",
-    alt: "Algodão doce sendo enrolado na estação",
+    src: "/images/site/stalls-row.jpg",
+    alt: "Quatro barraquinhas da Hora da Festa montadas no evento",
   },
   {
-    src: "/videos/site/churros.mp4",
-    poster: "/images/site/posters/churros.jpg",
-    caption: "Churros",
-    alt: "Churros na estação de madeira",
+    src: "/images/site/stalls-indoor.jpg",
+    alt: "Barraquinhas e mesa de buffet no salão",
   },
   {
-    src: "/videos/site/hamburguer.mp4",
-    poster: "/images/site/posters/hamburguer.jpg",
+    src: "/images/site/burgers-tower.jpg",
+    alt: "Torre de mini hambúrgueres na estação",
+  },
+] as const;
+
+export const FOOD_PHOTOS = [
+  {
+    src: "/images/site/burgers-tower.jpg",
+    alt: "Mini hambúrgueres em andares de madeira",
     caption: "Mini hambúrguer",
-    alt: "Mini hambúrguer montado na hora",
   },
   {
-    src: "/videos/site/crepe.mp4",
-    poster: "/images/site/posters/crepe.jpg",
-    caption: "Na chapa",
-    alt: "Salgado gratinando na chapa",
+    src: "/images/site/mesa-buffet.jpg",
+    alt: "Mesa de refeição completa no evento",
+    caption: "Buffet completo",
   },
-] as const;
-
-export const FOOD = [
-  { src: "/images/site/burgers.jpg", alt: "Mini hambúrgueres na estação de madeira", caption: "Mini hambúrguer" },
-  { src: "/images/site/pizza.jpg", alt: "Mini pizzas recém-saídas", caption: "Mini pizza" },
-  { src: "/images/site/churros.jpg", alt: "Churros com granulado", caption: "Churros" },
-  { src: "/images/site/pipoca.jpg", alt: "Saquinhos de pipoca na barraquinha", caption: "Pipoca" },
-  { src: "/images/site/crepe.jpg", alt: "Espetinhos assando na chapa", caption: "Assado na hora" },
-  { src: "/images/site/mesa.jpg", alt: "Carne sendo finalizada na panela, ainda quente", caption: "Na panela" },
+  {
+    src: "/images/site/mesa-salada.jpg",
+    alt: "Mesa posta com arroz, saladas e flores",
+    caption: "Mesa posta",
+  },
+  {
+    src: "/images/site/doces.jpg",
+    alt: "Mesa de doces com canudinho e bolo",
+    caption: "Mesa de doces",
+  },
+  {
+    src: "/images/site/evento-festa.jpg",
+    alt: "Convidados na frente das barraquinhas",
+    caption: "No evento",
+  },
 ] as const;
 
 export const GALLERY = [
-  { src: "/images/site/hero.jpg", alt: "Três barraquinhas de madeira da Hora da Festa num salão de festa", caption: "A estrutura no salão" },
-  { src: "/images/site/burgers.jpg", alt: "Mini hambúrgueres montados em andares de madeira", caption: "Mini hambúrguer" },
-  { src: "/images/site/mesa-2.jpg", alt: "Salgados e mini pizzas expostos na estação", caption: "Estação de salgados" },
-  { src: "/images/site/crepe.jpg", alt: "Espetinhos assando na chapa durante o evento", caption: "Assado na hora" },
-  { src: "/images/site/churros.jpg", alt: "Churros da estação", caption: "Churros" },
-  { src: "/images/site/pipoca.jpg", alt: "Pipoca da barraquinha", caption: "Pipoca" },
-  { src: "/images/site/pizza.jpg", alt: "Mini pizzas", caption: "Mini pizza" },
-  { src: "/images/site/doces.jpg", alt: "Mesa com canudinhos, empadas e bolo", caption: "Mesa de doces" },
-  { src: "/images/site/refeicao.jpg", alt: "Convidados sendo servidos no buffet", caption: "Refeição no evento" },
-  { src: "/images/site/mesa.jpg", alt: "Comida sendo finalizada na panela", caption: "Na panela" },
-  { src: "/images/site/stalls.jpg", alt: "Barraquinha de madeira da Hora da Festa", caption: "Barraquinha" },
-  { src: "/images/site/equipe.jpg", alt: "Equipe da Hora da Festa na estação", caption: "Equipe" },
-  { src: "/images/site/festa.jpg", alt: "Anfitriões com a equipe da Hora da Festa", caption: "No evento" },
+  {
+    src: "/images/site/stalls-day.jpg",
+    alt: "Barraquinhas de madeira ao ar livre",
+    caption: "Barraquinhas",
+  },
+  {
+    src: "/images/site/stalls-row.jpg",
+    alt: "Linha de estações da Hora da Festa",
+    caption: "Estações no salão",
+  },
+  {
+    src: "/images/site/burgers-tower.jpg",
+    alt: "Mini hambúrgueres na torre",
+    caption: "Mini hambúrguer",
+  },
+  {
+    src: "/images/site/mesa-buffet.jpg",
+    alt: "Buffet completo na mesa",
+    caption: "Buffet completo",
+  },
+  {
+    src: "/images/site/mesa-salada.jpg",
+    alt: "Mesa posta com saladas e arroz",
+    caption: "Mesa posta",
+  },
+  {
+    src: "/images/site/doces.jpg",
+    alt: "Mesa de doces",
+    caption: "Mesa de doces",
+  },
+  {
+    src: "/images/site/evento-festa.jpg",
+    alt: "Convidados com as barraquinhas ao fundo",
+    caption: "No evento",
+  },
+  {
+    src: "/images/site/equipe-garcons.jpg",
+    alt: "Garçons da Hora da Festa",
+    caption: "Equipe",
+  },
+  {
+    src: "/images/site/stalls-indoor.jpg",
+    alt: "Barraquinhas e buffet no salão",
+    caption: "Estrutura completa",
+  },
+  {
+    src: "/images/site/equipe-time.jpg",
+    alt: "Time completo da Hora da Festa",
+    caption: "Time",
+  },
+] as const;
+
+export const FEEDBACK = [
+  {
+    quote:
+      "Você é maravilhosa como pessoa e como profissional. Faz um trabalho impecável. Estava tudo muito delicioso.",
+    source: "Cliente no WhatsApp",
+  },
+  {
+    quote:
+      "Estava uma delícia. Tudo perfeito, de primeira qualidade. Ano que vem vai ser tudo por sua conta.",
+    source: "Marina",
+  },
+  {
+    quote:
+      "Simpatia, indicações e o sabor no ponto. A festa ganhou outro clima com a Hora da Festa.",
+    source: "Cliente no WhatsApp",
+  },
 ] as const;
 
 export const FAQ_ITEMS = [
@@ -125,7 +197,14 @@ export const FAQ_ITEMS = [
   },
 ] as const;
 
-export const AREAS = ["Caucaia", "Fortaleza", "Maracanaú", "Eusébio", "Aquiraz", "Região metropolitana"] as const;
+export const AREAS = [
+  "Caucaia",
+  "Fortaleza",
+  "Maracanaú",
+  "Eusébio",
+  "Aquiraz",
+  "Região metropolitana",
+] as const;
 
 export function whatsAppHref(message = SITE.whatsappMessage) {
   const digits = SITE.whatsapp.replace(/\D/g, "");

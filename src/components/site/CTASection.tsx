@@ -6,7 +6,7 @@ export function CTASection() {
     <section className="relative overflow-hidden bg-[#1c1412] px-5 py-20 text-white sm:px-8 sm:py-28">
       <div
         className="absolute inset-0 bg-cover bg-center opacity-35"
-        style={{ backgroundImage: "url(/images/site/stalls-night.jpg)" }}
+        style={{ backgroundImage: "url(/images/site/stalls-row.jpg)" }}
         aria-hidden
       />
       <div className="absolute inset-0 bg-[#1c1412]/55" aria-hidden />

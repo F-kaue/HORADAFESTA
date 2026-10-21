@@ -35,8 +35,23 @@
   }
 }
 
+.site-scroll-cue {
+  animation: site-scroll-cue 1.6s ease-in-out infinite;
+}
+
+@keyframes site-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .hero-photo {
+  .hero-photo,
+  .site-scroll-cue {
     animation: none;
   }
 }

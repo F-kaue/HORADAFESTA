@@ -10,11 +10,12 @@ import { cn } from "@/lib/utils";
 import { SiteButton } from "./SiteButton";
 
 const NAV = [
+  { href: "/#quem-somos", label: "Quem somos" },
+  { href: "/#barraquinhas", label: "Barraquinhas" },
   { href: "/servicos", label: "Serviços" },
   { href: "/galeria", label: "Galeria" },
-  { href: "/sobre", label: "Sobre" },
+  { href: "/#feedback", label: "Feedback" },
   { href: "/#duvidas", label: "Dúvidas" },
-  { href: "/#atendimento", label: "Onde vamos" },
 ];
 
 export function SiteHeader() {

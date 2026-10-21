@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClipReel } from "@/components/site/ClipReel";
 import { GallerySection } from "@/components/site/GallerySection";
 import { CTASection } from "@/components/site/CTASection";
 
@@ -15,11 +14,10 @@ export default function GaleriaPage() {
         <div className="mx-auto max-w-3xl">
           <h1 className="text-4xl font-bold sm:text-5xl">Galeria</h1>
           <p className="mt-4 max-w-xl text-lg text-white/75">
-            Fotos e vídeos dos eventos. A comida saindo na hora, do jeito que acontece.
+            Barraquinhas, mesas e a equipe no evento. Fotos da casa, sem inventar.
           </p>
         </div>
       </section>
-      <ClipReel />
       <GallerySection />
       <CTASection />
     </>

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Hora da Festa",
     description: "A cozinha chega na sua festa. Comida feita na hora.",
-    images: ["/images/site/hero.jpg"],
+    images: ["/images/site/stalls-day.jpg"],
     locale: "pt_BR",
     type: "website",
     url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://horadafestaoficial.com.br",
