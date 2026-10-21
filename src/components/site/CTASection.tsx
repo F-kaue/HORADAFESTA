@@ -1,24 +1,34 @@
+import Image from "next/image";
 import { SITE, whatsAppHref } from "@/lib/site/content";
 import { SiteButton } from "./SiteButton";
 
 export function CTASection() {
   return (
-    <section className="relative overflow-hidden bg-[#1c1412] px-5 py-20 text-white sm:px-8 sm:py-28">
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-35"
-        style={{ backgroundImage: "url(/images/site/stalls-row.jpg)" }}
-        aria-hidden
-      />
-      <div className="absolute inset-0 bg-[#1c1412]/55" aria-hidden />
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-xl">
-          <h2 className="text-3xl font-bold sm:text-5xl">Manda a data e o endereço.</h2>
-          <p className="mt-4 text-base leading-relaxed text-white/75">
-            O formulário já abre o resumo no WhatsApp da casa. Se preferir, chama direto
-            no {SITE.whatsappDisplay}.
+    <section className="relative overflow-hidden bg-[#1c1412] text-white">
+      <div className="absolute inset-0">
+        <Image
+          src="/images/site/evento-noite.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-40"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1c1412] via-[#1c1412]/85 to-[#1c1412]/55" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(61,184,176,0.2),transparent_40%)]" />
+      </div>
+
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-12 lg:items-end">
+        <div className="lg:col-span-7">
+          <p className="site-kicker !text-[#ff9fc4]">Orçamento</p>
+          <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-5xl">
+            Manda a data e o endereço.
+          </h2>
+          <p className="mt-4 max-w-lg text-base leading-relaxed text-white/75 sm:text-lg">
+            O formulário já abre o resumo no WhatsApp da casa. Se preferir, chama direto no{" "}
+            {SITE.whatsappDisplay}.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row lg:col-span-5 lg:justify-end">
           <SiteButton href="/orcamento" variant="white">
             Pedir orçamento
           </SiteButton>

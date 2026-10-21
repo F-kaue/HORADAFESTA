@@ -3,23 +3,36 @@ import { SiteVideo } from "./SiteVideo";
 
 export function ClipReel() {
   return (
-    <section id="videos" className="scroll-mt-24 bg-[#1c1412] py-14 text-white sm:py-20">
+    <section id="videos" className="site-stripe-dark scroll-mt-24 py-16 text-white sm:py-24">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <h2 className="text-3xl font-bold sm:text-4xl">A estação ligada</h2>
-        <p className="mt-2 max-w-md text-sm text-white/70">
-          Arrasta para o lado. É a comida saindo na festa, sem pose.
-        </p>
+        <div className="grid gap-4 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-7">
+            <p className="site-kicker !text-[#ff9fc4]">Vídeos</p>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">A estação ligada</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-white/70 lg:col-span-5 lg:text-base">
+            Arrasta para o lado. É a comida saindo na festa — chapa, algodão, churros e mini
+            hambúrguer, sem pose.
+          </p>
+        </div>
       </div>
-      <div className="site-rail mt-8 px-5 sm:px-8">
+      <div className="site-rail mt-10 px-5 sm:px-8">
         {CLIPS.map((clip) => (
-          <figure key={clip.src} className="w-[78vw] max-w-[280px] shrink-0 sm:max-w-[320px]">
-            <SiteVideo
-              src={clip.src}
-              poster={clip.poster}
-              label={clip.alt}
-              className="aspect-[9/16] w-full bg-[#2a211c] object-cover"
-            />
-            <figcaption className="mt-3 text-sm font-semibold">{clip.caption}</figcaption>
+          <figure key={clip.src} className="w-[78vw] max-w-[280px] shrink-0 sm:max-w-[300px]">
+            <div className="site-photo-frame">
+              <SiteVideo
+                src={clip.src}
+                poster={clip.poster}
+                label={clip.alt}
+                className="aspect-[9/16] w-full bg-[#2a211c] object-cover"
+              />
+            </div>
+            <figcaption className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">{clip.caption}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#3db8b0]">
+                Ao vivo
+              </span>
+            </figcaption>
           </figure>
         ))}
       </div>

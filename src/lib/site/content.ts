@@ -16,7 +16,7 @@ export const SITE = {
 export const SERVICES = [
   {
     title: "Barraquinhas e estações",
-    image: "/images/site/stalls-day.jpg",
+    image: "/images/site/stalls-jardim.jpg",
     alt: "Barraquinhas de madeira da Hora da Festa ao ar livre, com luminárias e equipe",
     lead: "A estrutura de madeira chega montada e vira atrativo do salão.",
     note: "Garçom não entra neste pacote. Se precisar de serviço de mesa, a gente combina à parte.",
@@ -28,7 +28,7 @@ export const SERVICES = [
   },
   {
     title: "Buffet completo",
-    image: "/images/site/mesa-buffet.jpg",
+    image: "/images/site/mesa-completa.jpg",
     alt: "Mesa de refeição completa com arroz, carnes e saladas",
     lead: "Refeições completas, cardápio variado e apresentação impecável.",
     note: "Neste pacote o garçom está incluso.",
@@ -87,86 +87,106 @@ export const CLIPS = [
 
 export const STALL_PHOTOS = [
   {
-    src: "/images/site/stalls-day.jpg",
-    alt: "Duas barraquinhas de madeira com luminárias, no jardim",
+    src: "/images/site/stalls-jardim.jpg",
+    alt: "Duas barraquinhas de madeira com luminárias no jardim e equipe na chapa",
   },
   {
-    src: "/images/site/stalls-row.jpg",
-    alt: "Quatro barraquinhas da Hora da Festa montadas no evento",
+    src: "/images/site/stalls-luz.jpg",
+    alt: "Barraquinha iluminada com lâmpadas de corda",
   },
   {
-    src: "/images/site/stalls-indoor.jpg",
-    alt: "Barraquinhas e mesa de buffet no salão",
+    src: "/images/site/stalls-salao.jpg",
+    alt: "Barraquinhas montadas no salão do evento",
   },
   {
-    src: "/images/site/burgers-tower.jpg",
-    alt: "Torre de mini hambúrgueres na estação",
+    src: "/images/site/evento-burgers.jpg",
+    alt: "Torre de mini hambúrgueres na estação da festa",
   },
 ] as const;
 
 export const FOOD_PHOTOS = [
   {
-    src: "/images/site/burgers-tower.jpg",
-    alt: "Mini hambúrgueres em andares de madeira",
+    src: "/images/site/evento-burgers.jpg",
+    alt: "Mini hambúrgueres em andares na barraquinha",
     caption: "Mini hambúrguer",
   },
   {
-    src: "/images/site/mesa-buffet.jpg",
-    alt: "Mesa de refeição completa no evento",
+    src: "/images/site/mesa-completa.jpg",
+    alt: "Mesa de buffet com carnes, arroz e saladas",
     caption: "Buffet completo",
   },
   {
-    src: "/images/site/mesa-salada.jpg",
-    alt: "Mesa posta com arroz, saladas e flores",
+    src: "/images/site/mesa-arroz.jpg",
+    alt: "Arroz e acompanhamentos na mesa posta",
     caption: "Mesa posta",
   },
   {
-    src: "/images/site/doces.jpg",
-    alt: "Mesa de doces com canudinho e bolo",
-    caption: "Mesa de doces",
+    src: "/images/site/mesa-saladas.jpg",
+    alt: "Saladas coloridas no buffet",
+    caption: "Saladas",
   },
   {
-    src: "/images/site/evento-festa.jpg",
-    alt: "Convidados na frente das barraquinhas",
-    caption: "No evento",
+    src: "/images/site/mesa-carnes.jpg",
+    alt: "Carnes no rechaud do buffet",
+    caption: "Carnes",
+  },
+  {
+    src: "/images/site/mesa-doces-2.jpg",
+    alt: "Mesa completa com pratos, talheres e refeição",
+    caption: "Serviço completo",
+  },
+  {
+    src: "/images/site/mesa-festa-2.jpg",
+    alt: "Mesa de festa com flores e pratos",
+    caption: "Na festa",
+  },
+  {
+    src: "/images/site/evento-crepe-close.jpg",
+    alt: "Crepe finalizando na chapa",
+    caption: "Na chapa",
   },
 ] as const;
 
 export const GALLERY = [
   {
-    src: "/images/site/stalls-day.jpg",
-    alt: "Barraquinhas de madeira ao ar livre",
+    src: "/images/site/stalls-jardim.jpg",
+    alt: "Barraquinhas de madeira no jardim",
     caption: "Barraquinhas",
   },
   {
-    src: "/images/site/stalls-row.jpg",
-    alt: "Linha de estações da Hora da Festa",
-    caption: "Estações no salão",
+    src: "/images/site/evento-noite.jpg",
+    alt: "Casal celebrando na frente da barraquinha",
+    caption: "No evento",
   },
   {
-    src: "/images/site/burgers-tower.jpg",
-    alt: "Mini hambúrgueres na torre",
-    caption: "Mini hambúrguer",
-  },
-  {
-    src: "/images/site/mesa-buffet.jpg",
+    src: "/images/site/mesa-completa.jpg",
     alt: "Buffet completo na mesa",
     caption: "Buffet completo",
   },
   {
-    src: "/images/site/mesa-salada.jpg",
-    alt: "Mesa posta com saladas e arroz",
+    src: "/images/site/evento-burgers.jpg",
+    alt: "Mini hambúrgueres na torre",
+    caption: "Mini hambúrguer",
+  },
+  {
+    src: "/images/site/stalls-luz.jpg",
+    alt: "Barraquinha com luminárias",
+    caption: "Estação",
+  },
+  {
+    src: "/images/site/mesa-arroz.jpg",
+    alt: "Arroz e acompanhamentos",
     caption: "Mesa posta",
   },
   {
-    src: "/images/site/doces.jpg",
-    alt: "Mesa de doces",
-    caption: "Mesa de doces",
+    src: "/images/site/evento-fila.jpg",
+    alt: "Convidados na frente das estações",
+    caption: "Celebração",
   },
   {
-    src: "/images/site/evento-festa.jpg",
-    alt: "Convidados com as barraquinhas ao fundo",
-    caption: "No evento",
+    src: "/images/site/mesa-saladas.jpg",
+    alt: "Saladas do buffet",
+    caption: "Saladas",
   },
   {
     src: "/images/site/equipe-garcons.jpg",
@@ -174,37 +194,84 @@ export const GALLERY = [
     caption: "Equipe",
   },
   {
-    src: "/images/site/stalls-indoor.jpg",
-    alt: "Barraquinhas e buffet no salão",
-    caption: "Estrutura completa",
+    src: "/images/site/stalls-salao.jpg",
+    alt: "Barraquinhas no salão",
+    caption: "No salão",
+  },
+  {
+    src: "/images/site/mesa-carnes.jpg",
+    alt: "Carnes no rechaud",
+    caption: "Carnes",
+  },
+  {
+    src: "/images/site/evento-crepe-close.jpg",
+    alt: "Crepe na chapa",
+    caption: "Na chapa",
+  },
+  {
+    src: "/images/site/mesa-doces-2.jpg",
+    alt: "Mesa completa com equipe ao fundo",
+    caption: "Serviço",
   },
   {
     src: "/images/site/equipe-time.jpg",
     alt: "Time completo da Hora da Festa",
     caption: "Time",
   },
+  {
+    src: "/images/site/mesa-festa-2.jpg",
+    alt: "Mesa de festa com flores",
+    caption: "Apresentação",
+  },
+  {
+    src: "/images/site/stalls-dupla.jpg",
+    alt: "Duas barraquinhas lado a lado",
+    caption: "Estrutura",
+  },
+  {
+    src: "/images/site/evento-servindo.jpg",
+    alt: "Equipe servindo no evento",
+    caption: "Atendimento",
+  },
+  {
+    src: "/images/site/mesa-pratos.jpg",
+    alt: "Pratos e talheres prontos para servir",
+    caption: "Detalhe",
+  },
 ] as const;
 
 export const FEEDBACK = [
   {
-    src: "/images/site/feedback-1.jpg",
+    src: "/images/site/feedback-9.jpg",
     alt: "Print de feedback de cliente da Hora da Festa",
   },
   {
-    src: "/images/site/feedback-2.jpg",
+    src: "/images/site/feedback-8.jpg",
     alt: "Print de feedback de cliente no WhatsApp",
   },
   {
-    src: "/images/site/feedback-3.jpg",
+    src: "/images/site/feedback-7.jpg",
     alt: "Print de avaliação após o evento",
   },
   {
-    src: "/images/site/feedback-4.jpg",
+    src: "/images/site/feedback-6.jpg",
     alt: "Print de mensagem de cliente satisfeito",
   },
   {
-    src: "/images/site/feedback-5.jpg",
+    src: "/images/site/feedback-1.jpg",
     alt: "Print de feedback que a casa ama",
+  },
+  {
+    src: "/images/site/feedback-2.jpg",
+    alt: "Print de agradecimento de cliente",
+  },
+  {
+    src: "/images/site/feedback-3.jpg",
+    alt: "Print de avaliação no WhatsApp",
+  },
+  {
+    src: "/images/site/feedback-4.jpg",
+    alt: "Print de mensagem após a festa",
   },
 ] as const;
 
@@ -239,8 +306,6 @@ export const AREAS = [
   "Caucaia",
   "Fortaleza",
   "Maracanaú",
-  "Eusébio",
-  "Aquiraz",
   "Região metropolitana",
 ] as const;
 
