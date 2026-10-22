@@ -1,66 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CLIPS } from "@/lib/site/content";
 import { SiteVideo } from "./SiteVideo";
 
 export function ClipReel() {
-  const railRef = useRef<HTMLDivElement>(null);
-  const scrollTimer = useRef<number>(0);
-  const [active, setActive] = useState(0);
-  const [sectionInView, setSectionInView] = useState(false);
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
 
-  const pickActive = useCallback(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-
-    const railRect = rail.getBoundingClientRect();
-    const centerX = railRect.left + railRect.width / 2;
-    const cards = Array.from(rail.querySelectorAll<HTMLElement>("[data-clip]"));
-
-    let best = 0;
-    let bestDist = Number.POSITIVE_INFINITY;
-
-    cards.forEach((card, i) => {
-      const rect = card.getBoundingClientRect();
-      const mid = rect.left + rect.width / 2;
-      const dist = Math.abs(mid - centerX);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = i;
-      }
-    });
-
-    setActive((prev) => (prev === best ? prev : best));
-  }, []);
+  const stop = useCallback(() => setPlayingIndex(null), []);
 
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
+    if (playingIndex === null) return;
 
-    const section = rail.closest("section");
-    const sectionObserver = new IntersectionObserver(
-      ([entry]) => setSectionInView(entry.isIntersecting && entry.intersectionRatio >= 0.2),
-      { threshold: [0, 0.2, 0.4] }
+    const card = document.querySelector<HTMLElement>(`[data-clip-index="${playingIndex}"]`);
+    if (!card) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) stop();
+      },
+      { threshold: 0.35 }
     );
-    if (section) sectionObserver.observe(section);
+    io.observe(card);
 
-    const onScroll = () => {
-      window.clearTimeout(scrollTimer.current);
-      scrollTimer.current = window.setTimeout(pickActive, 80);
+    const onHide = () => {
+      if (document.hidden) stop();
     };
-
-    pickActive();
-    rail.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", pickActive, { passive: true });
+    document.addEventListener("visibilitychange", onHide);
 
     return () => {
-      sectionObserver.disconnect();
-      rail.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", pickActive);
-      window.clearTimeout(scrollTimer.current);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onHide);
     };
-  }, [pickActive]);
+  }, [playingIndex, stop]);
 
   return (
     <section id="videos" className="site-stripe-dark scroll-mt-24 py-16 text-white sm:py-24">
@@ -71,36 +43,32 @@ export function ClipReel() {
             <h2 className="mt-3 text-3xl font-bold sm:text-4xl">A estação ligada</h2>
           </div>
           <p className="text-sm leading-relaxed text-white/70 lg:col-span-5 lg:text-base">
-            Arrasta para o lado. O clipe do centro toca sozinho; os outros ficam no poster.
+            Arrasta para o lado e toca no play. A comida saindo na festa, do jeito que acontece.
           </p>
         </div>
       </div>
-      <div ref={railRef} className="site-rail mt-10 px-5 sm:px-8">
+
+      <div className="site-rail mt-10 px-5 sm:px-8">
         {CLIPS.map((clip, i) => {
-          const isActive = sectionInView && i === active;
+          const isPlaying = playingIndex === i;
           return (
             <figure
               key={clip.src}
-              data-clip
-              className="w-[78vw] max-w-[280px] shrink-0 sm:max-w-[300px]"
+              data-clip-index={i}
+              className="w-[72vw] max-w-[260px] shrink-0 sm:max-w-[280px]"
             >
-              <div className="site-photo-frame">
+              <div className="site-photo-frame overflow-hidden">
                 <SiteVideo
                   src={clip.src}
                   poster={clip.poster}
                   label={clip.alt}
-                  active={isActive}
+                  playing={isPlaying}
+                  onPlayRequest={() => setPlayingIndex(i)}
+                  onStop={stop}
                   className="aspect-[9/16] w-full"
                 />
               </div>
-              <figcaption className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold">{clip.caption}</span>
-                {isActive ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#3db8b0]">
-                    Ao vivo
-                  </span>
-                ) : null}
-              </figcaption>
+              <figcaption className="mt-3 text-sm font-semibold">{clip.caption}</figcaption>
             </figure>
           );
         })}

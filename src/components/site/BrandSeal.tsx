@@ -92,7 +92,7 @@ export function BrandSeal() {
           muted
           playsInline
           autoPlay
-          preload="auto"
+          preload="metadata"
           aria-hidden={done}
           aria-label="O carrinho chega e forma a marca Hora da Festa"
         />

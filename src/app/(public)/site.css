@@ -75,14 +75,25 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.site-photo-frame img,
-.site-photo-frame video {
+.site-photo-frame > img,
+.site-photo-frame > video {
   transition: transform 0.7s ease;
 }
 
-.site-photo-frame:hover img,
-.site-photo-frame:hover video {
-  transform: scale(1.04);
+@media (hover: hover) and (pointer: fine) {
+  .site-photo-frame:hover > img,
+  .site-photo-frame:hover > video {
+    transform: scale(1.03);
+  }
+}
+
+/* Clip reel: sem zoom no hover — evita jank no scroll mobile */
+#videos .site-photo-frame:hover > img,
+#videos .site-photo-frame:hover > video,
+#videos .site-photo-frame img,
+#videos .site-photo-frame video {
+  transform: none;
+  transition: none;
 }
 
 .site-stripe {
